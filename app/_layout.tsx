@@ -13,6 +13,17 @@ export default function RootLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen
+        name="test"
+        options={{
+          headerShown: true,
+          title: "Add Transaction",
+          headerStyle: {
+            backgroundColor: "rgb(128, 75, 56)",
+          },
+          headerTintColor: "#fff",
+        }}
+      />
     </Stack>
   );
 }

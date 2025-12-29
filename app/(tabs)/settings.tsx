@@ -6,7 +6,7 @@ export default function SettingsTab() {
     <View style={styles.container}>
       <Text style={styles.title}>Settings</Text>
 
-      <Link href="/(tabs)/settings/test" asChild>
+      <Link href="/test" asChild>
         <TouchableOpacity style={styles.button}>
           <Text style={styles.buttonText}>Test - Add Transaction</Text>
         </TouchableOpacity>
