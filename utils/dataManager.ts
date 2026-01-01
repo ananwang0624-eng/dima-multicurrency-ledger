@@ -1,6 +1,9 @@
 import * as Crypto from "expo-crypto";
 import { File, Paths } from "expo-file-system";
 
+import { getCurrencyByCode } from "@/data/currencies";
+import type { IconTilePickerValue } from "@/data/iconTileItems";
+
 const DATA_FILE_NAME = "bookkeeping_data.json";
 const dataFile = new File(Paths.document, DATA_FILE_NAME);
 
@@ -8,11 +11,69 @@ export type TransactionRecord = {
   uuid: string;
   amount: number;
   currency: string;
-  category: number;
+  category: IconTilePickerValue;
   date: string;
   description?: string;
   type: "income" | "expense";
 };
+
+const ISO_8601_RFC_3339_DATE_TIME =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?(?:Z|[+-]\d{2}:\d{2})$/;
+
+function isIso8601Rfc3339DateTime(value: string): boolean {
+  if (!ISO_8601_RFC_3339_DATE_TIME.test(value)) return false;
+  const timestamp = Date.parse(value);
+  return !Number.isNaN(timestamp);
+}
+
+function validateTransactionRecord(record: TransactionRecord): void {
+  if (!record.uuid || typeof record.uuid !== "string") {
+    throw new Error("Invalid transaction: uuid is required");
+  }
+
+  if (!Number.isFinite(record.amount) || record.amount <= 0) {
+    throw new Error("Invalid transaction: amount must be a positive number");
+  }
+
+  if (!record.currency || typeof record.currency !== "string") {
+    throw new Error("Invalid transaction: currency is required");
+  }
+  if (!getCurrencyByCode(record.currency)) {
+    throw new Error(
+      `Invalid transaction: unsupported currency code '${record.currency}'`
+    );
+  }
+
+  if (
+    !Number.isInteger(record.category) ||
+    record.category < 0 ||
+    record.category > 7
+  ) {
+    throw new Error(
+      "Invalid transaction: category must be an integer between 0 and 7"
+    );
+  }
+
+  if (!record.date || typeof record.date !== "string") {
+    throw new Error("Invalid transaction: date is required");
+  }
+  if (!isIso8601Rfc3339DateTime(record.date)) {
+    throw new Error(
+      "Invalid transaction: date must be an ISO 8601 / RFC 3339 datetime string"
+    );
+  }
+
+  if (record.type !== "income" && record.type !== "expense") {
+    throw new Error("Invalid transaction: type must be 'income' or 'expense'");
+  }
+
+  if (
+    record.description !== undefined &&
+    typeof record.description !== "string"
+  ) {
+    throw new Error("Invalid transaction: description must be a string");
+  }
+}
 
 /**
  * Data structure grouped by year-month (YYYY-MM).
@@ -43,6 +104,8 @@ export function getYearMonthKey(date: string): string {
  * Automatically groups by year-month and sorts by date (descending).
  */
 export async function addTransaction(record: TransactionRecord): Promise<void> {
+  validateTransactionRecord(record);
+
   const data = await readData();
   const key = getYearMonthKey(record.date);
 
