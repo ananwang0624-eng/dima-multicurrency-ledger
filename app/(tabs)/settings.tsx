@@ -1,3 +1,4 @@
+import { useFocusEffect } from "@react-navigation/native";
 import { Link } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -45,6 +46,13 @@ export default function SettingsTab() {
   useEffect(() => {
     refreshLatest();
   }, [refreshLatest]);
+
+  // Refresh when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      refreshLatest();
+    }, [refreshLatest])
+  );
 
   const handleClearAll = useCallback(async () => {
     try {

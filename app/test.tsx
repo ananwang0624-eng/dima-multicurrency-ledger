@@ -1,9 +1,11 @@
 import { CURRENCIES } from "@/data/currencies";
+import type { IconTilePickerValue } from "@/data/iconTileItems";
 import {
   addTransaction,
   generateUUID,
   TransactionRecord,
 } from "@/utils/dataManager";
+import { router } from "expo-router";
 import { useState } from "react";
 import {
   Alert,
@@ -17,13 +19,15 @@ import {
   View,
 } from "react-native";
 
-const CATEGORIES = [
-  { id: 1, name: "Food" },
-  { id: 2, name: "Transport" },
-  { id: 3, name: "Shopping" },
-  { id: 4, name: "Entertainment" },
-  { id: 5, name: "Salary" },
-  { id: 6, name: "Other" },
+const CATEGORIES: { id: IconTilePickerValue; name: string }[] = [
+  { id: 0, name: "Dining" },
+  { id: 1, name: "Transparent" },
+  { id: 2, name: "Shopping" },
+  { id: 3, name: "Gaming" },
+  { id: 4, name: "Health" },
+  { id: 5, name: "Education" },
+  { id: 6, name: "Daily" },
+  { id: 7, name: "Others" },
 ];
 
 const TRANSACTION_TYPES: ("income" | "expense")[] = ["income", "expense"];
@@ -31,14 +35,25 @@ const TRANSACTION_TYPES: ("income" | "expense")[] = ["income", "expense"];
 export default function TestPage() {
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("USD");
-  const [category, setCategory] = useState(1);
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [category, setCategory] = useState<IconTilePickerValue>(0);
   const [description, setDescription] = useState("");
   const [type, setType] = useState<"income" | "expense">("expense");
 
   const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [showTypePicker, setShowTypePicker] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+
+  // Date state
+  const now = new Date();
+  const [year, setYear] = useState(() => String(now.getFullYear()));
+  const [month, setMonth] = useState(() => String(now.getMonth() + 1));
+  const [day, setDay] = useState(() => String(now.getDate()));
+
+  // Time state
+  const [hours, setHours] = useState(() => String(now.getHours()));
+  const [minutes, setMinutes] = useState(() => String(now.getMinutes()));
 
   const handleAddTransaction = async () => {
     if (!amount || parseFloat(amount) <= 0) {
@@ -46,12 +61,23 @@ export default function TestPage() {
       return;
     }
 
+    // Create date with selected date and time
+    const dateWithTime = new Date(
+      parseInt(year),
+      parseInt(month) - 1,
+      parseInt(day),
+      parseInt(hours) || 0,
+      parseInt(minutes) || 0,
+      0,
+      0
+    );
+
     const record: TransactionRecord = {
       uuid: generateUUID(),
       amount: parseFloat(amount),
       currency,
       category,
-      date: date + "T00:00:00.000Z",
+      date: dateWithTime.toISOString(),
       description: description || undefined,
       type,
     };
@@ -62,6 +88,8 @@ export default function TestPage() {
       // Reset form
       setAmount("");
       setDescription("");
+      // Navigate back to settings to trigger refresh
+      router.push("/(tabs)/settings");
     } catch (error) {
       Alert.alert("Error", "Failed to add transaction");
       console.error(error);
@@ -124,13 +152,28 @@ export default function TestPage() {
 
       {/* Date */}
       <View style={styles.fieldContainer}>
-        <Text style={styles.label}>Date (YYYY-MM-DD)</Text>
-        <TextInput
-          style={styles.input}
-          value={date}
-          onChangeText={setDate}
-          placeholder="2025-12-29"
-        />
+        <Text style={styles.label}>Date</Text>
+        <TouchableOpacity
+          style={styles.picker}
+          onPress={() => setShowDatePicker(true)}
+        >
+          <Text>
+            {year}-{month.padStart(2, "0")}-{day.padStart(2, "0")}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Time */}
+      <View style={styles.fieldContainer}>
+        <Text style={styles.label}>Time</Text>
+        <TouchableOpacity
+          style={styles.picker}
+          onPress={() => setShowTimePicker(true)}
+        >
+          <Text>
+            {hours.padStart(2, "0")}:{minutes.padStart(2, "0")}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {/* Description */}
@@ -251,6 +294,258 @@ export default function TestPage() {
           </View>
         </View>
       </Modal>
+
+      {/* Date Picker Modal */}
+      <Modal
+        visible={showDatePicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowDatePicker(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select Date</Text>
+            <View style={styles.datePickerContainer}>
+              {/* Year Picker */}
+              <View style={styles.wheelPickerWrapper}>
+                <Text style={styles.timeLabel}>Year</Text>
+                <View style={styles.wheelPicker}>
+                  <ScrollView
+                    showsVerticalScrollIndicator={false}
+                    snapToInterval={50}
+                    decelerationRate="fast"
+                    contentContainerStyle={styles.wheelScrollContent}
+                    onMomentumScrollEnd={(event) => {
+                      const offsetY = event.nativeEvent.contentOffset.y;
+                      const index = Math.round(offsetY / 50);
+                      const selectedYear = 2000 + index;
+                      if (selectedYear >= 2000 && selectedYear < 2050) {
+                        setYear(String(selectedYear));
+                      }
+                    }}
+                  >
+                    {Array.from({ length: 50 }, (_, i) => 2000 + i).map((y) => (
+                      <TouchableOpacity
+                        key={y}
+                        style={[
+                          styles.wheelItem,
+                          parseInt(year) === y && styles.wheelItemSelected,
+                        ]}
+                        onPress={() => setYear(String(y))}
+                      >
+                        <Text
+                          style={[
+                            styles.wheelItemText,
+                            parseInt(year) === y &&
+                              styles.wheelItemTextSelected,
+                          ]}
+                        >
+                          {y}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              </View>
+
+              {/* Month Picker */}
+              <View style={styles.wheelPickerWrapper}>
+                <Text style={styles.timeLabel}>Month</Text>
+                <View style={styles.wheelPicker}>
+                  <ScrollView
+                    showsVerticalScrollIndicator={false}
+                    snapToInterval={50}
+                    decelerationRate="fast"
+                    contentContainerStyle={styles.wheelScrollContent}
+                    onMomentumScrollEnd={(event) => {
+                      const offsetY = event.nativeEvent.contentOffset.y;
+                      const index = Math.round(offsetY / 50);
+                      const selectedMonth = index + 1;
+                      if (selectedMonth >= 1 && selectedMonth <= 12) {
+                        setMonth(String(selectedMonth));
+                      }
+                    }}
+                  >
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                      <TouchableOpacity
+                        key={m}
+                        style={[
+                          styles.wheelItem,
+                          parseInt(month) === m && styles.wheelItemSelected,
+                        ]}
+                        onPress={() => setMonth(String(m))}
+                      >
+                        <Text
+                          style={[
+                            styles.wheelItemText,
+                            parseInt(month) === m &&
+                              styles.wheelItemTextSelected,
+                          ]}
+                        >
+                          {String(m).padStart(2, "0")}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              </View>
+
+              {/* Day Picker */}
+              <View style={styles.wheelPickerWrapper}>
+                <Text style={styles.timeLabel}>Day</Text>
+                <View style={styles.wheelPicker}>
+                  <ScrollView
+                    showsVerticalScrollIndicator={false}
+                    snapToInterval={50}
+                    decelerationRate="fast"
+                    contentContainerStyle={styles.wheelScrollContent}
+                    onMomentumScrollEnd={(event) => {
+                      const offsetY = event.nativeEvent.contentOffset.y;
+                      const index = Math.round(offsetY / 50);
+                      const selectedDay = index + 1;
+                      if (selectedDay >= 1 && selectedDay <= 31) {
+                        setDay(String(selectedDay));
+                      }
+                    }}
+                  >
+                    {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+                      <TouchableOpacity
+                        key={d}
+                        style={[
+                          styles.wheelItem,
+                          parseInt(day) === d && styles.wheelItemSelected,
+                        ]}
+                        onPress={() => setDay(String(d))}
+                      >
+                        <Text
+                          style={[
+                            styles.wheelItemText,
+                            parseInt(day) === d && styles.wheelItemTextSelected,
+                          ]}
+                        >
+                          {String(d).padStart(2, "0")}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => setShowDatePicker(false)}
+            >
+              <Text style={styles.modalCloseText}>Confirm</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Time Picker Modal */}
+      <Modal
+        visible={showTimePicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowTimePicker(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select Time</Text>
+            <View style={styles.timePickerContainer}>
+              {/* Hour Picker */}
+              <View style={styles.wheelPickerWrapper}>
+                <Text style={styles.timeLabel}>Hour</Text>
+                <View style={styles.wheelPicker}>
+                  <ScrollView
+                    showsVerticalScrollIndicator={false}
+                    snapToInterval={50}
+                    decelerationRate="fast"
+                    contentContainerStyle={styles.wheelScrollContent}
+                    onMomentumScrollEnd={(event) => {
+                      const offsetY = event.nativeEvent.contentOffset.y;
+                      const index = Math.round(offsetY / 50);
+                      if (index >= 0 && index < 24) {
+                        setHours(String(index));
+                      }
+                    }}
+                  >
+                    {Array.from({ length: 24 }, (_, i) => i).map((hour) => (
+                      <TouchableOpacity
+                        key={hour}
+                        style={[
+                          styles.wheelItem,
+                          parseInt(hours) === hour && styles.wheelItemSelected,
+                        ]}
+                        onPress={() => setHours(String(hour))}
+                      >
+                        <Text
+                          style={[
+                            styles.wheelItemText,
+                            parseInt(hours) === hour &&
+                              styles.wheelItemTextSelected,
+                          ]}
+                        >
+                          {String(hour).padStart(2, "0")}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              </View>
+
+              <Text style={styles.timeSeparator}>:</Text>
+
+              {/* Minute Picker */}
+              <View style={styles.wheelPickerWrapper}>
+                <Text style={styles.timeLabel}>Minute</Text>
+                <View style={styles.wheelPicker}>
+                  <ScrollView
+                    showsVerticalScrollIndicator={false}
+                    snapToInterval={50}
+                    decelerationRate="fast"
+                    contentContainerStyle={styles.wheelScrollContent}
+                    onMomentumScrollEnd={(event) => {
+                      const offsetY = event.nativeEvent.contentOffset.y;
+                      const index = Math.round(offsetY / 50);
+                      if (index >= 0 && index < 60) {
+                        setMinutes(String(index));
+                      }
+                    }}
+                  >
+                    {Array.from({ length: 60 }, (_, i) => i).map((minute) => (
+                      <TouchableOpacity
+                        key={minute}
+                        style={[
+                          styles.wheelItem,
+                          parseInt(minutes) === minute &&
+                            styles.wheelItemSelected,
+                        ]}
+                        onPress={() => setMinutes(String(minute))}
+                      >
+                        <Text
+                          style={[
+                            styles.wheelItemText,
+                            parseInt(minutes) === minute &&
+                              styles.wheelItemTextSelected,
+                          ]}
+                        >
+                          {String(minute).padStart(2, "0")}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => setShowTimePicker(false)}
+            >
+              <Text style={styles.modalCloseText}>Confirm</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -342,5 +637,60 @@ const styles = StyleSheet.create({
   modalCloseText: {
     fontSize: 16,
     fontWeight: "600",
+  },
+  datePickerContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginVertical: 20,
+  },
+  timePickerContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginVertical: 20,
+  },
+  wheelPickerWrapper: {
+    alignItems: "center",
+  },
+  timeLabel: {
+    fontSize: 14,
+    color: "#666",
+    marginBottom: 8,
+    fontWeight: "600",
+  },
+  wheelPicker: {
+    height: 200,
+    width: 80,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    backgroundColor: "#fff",
+    overflow: "hidden",
+  },
+  wheelScrollContent: {
+    paddingVertical: 75,
+  },
+  wheelItem: {
+    height: 50,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  wheelItemSelected: {
+    backgroundColor: "rgba(128, 75, 56, 0.1)",
+  },
+  wheelItemText: {
+    fontSize: 24,
+    color: "#999",
+  },
+  wheelItemTextSelected: {
+    color: "rgb(128, 75, 56)",
+    fontWeight: "bold",
+  },
+  timeSeparator: {
+    fontSize: 32,
+    fontWeight: "bold",
+    marginHorizontal: 16,
+    color: "rgb(128, 75, 56)",
   },
 });
