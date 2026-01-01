@@ -27,6 +27,9 @@ export default function TabLayout() {
         headerTintColor: "#fff",
         tabBarActiveTintColor: "rgb(128, 75, 56)",
         tabBarInactiveTintColor: "rgb(133, 115, 110)",
+        sceneStyle: {
+          backgroundColor: "rgb(253, 247, 245)",
+        },
         tabBarStyle: {
           backgroundColor: "rgb(246, 233, 228)",
         },
