@@ -90,7 +90,7 @@ const SEEDED_TEST_TRANSACTIONS: TransactionRecord[] = [
     amount: 28.5,
     currency: "CNY",
     category: 0,
-    date: "2026-01-01T02:15:00.000Z",
+    date: "2026-01-01T02:15:00.000+01:00",
     description: "Seed: Breakfast",
     type: "expense",
   },
@@ -99,7 +99,7 @@ const SEEDED_TEST_TRANSACTIONS: TransactionRecord[] = [
     amount: 199.0,
     currency: "CNY",
     category: 2,
-    date: "2026-01-01T09:40:00.000Z",
+    date: "2026-01-01T09:40:00.000+01:00",
     description: "Seed: Shopping",
     type: "expense",
   },
@@ -108,7 +108,7 @@ const SEEDED_TEST_TRANSACTIONS: TransactionRecord[] = [
     amount: 1200.0,
     currency: "CNY",
     category: 7,
-    date: "2026-01-01T12:00:00.000Z",
+    date: "2026-01-01T12:00:00.000+01:00",
     description: "Seed: Bonus",
     type: "income",
   },
@@ -119,7 +119,7 @@ const SEEDED_TEST_TRANSACTIONS: TransactionRecord[] = [
     amount: 15.9,
     currency: "CNY",
     category: 0,
-    date: "2025-12-03T08:30:00.000Z",
+    date: "2025-12-03T08:30:00.000+01:00",
     description: "Seed: Coffee",
     type: "expense",
   },
@@ -128,7 +128,7 @@ const SEEDED_TEST_TRANSACTIONS: TransactionRecord[] = [
     amount: 68.0,
     currency: "CNY",
     category: 6,
-    date: "2025-12-07T13:10:00.000Z",
+    date: "2025-12-07T13:10:00.000+01:00",
     description: "Seed: Daily",
     type: "expense",
   },
@@ -137,7 +137,7 @@ const SEEDED_TEST_TRANSACTIONS: TransactionRecord[] = [
     amount: 329.0,
     currency: "CNY",
     category: 3,
-    date: "2025-12-11T19:45:00.000Z",
+    date: "2025-12-11T19:45:00.000+01:00",
     description: "Seed: Gaming",
     type: "expense",
   },
@@ -146,7 +146,7 @@ const SEEDED_TEST_TRANSACTIONS: TransactionRecord[] = [
     amount: 45.0,
     currency: "CNY",
     category: 5,
-    date: "2025-12-15T10:05:00.000Z",
+    date: "2025-12-15T10:05:00.000+01:00",
     description: "Seed: Education",
     type: "expense",
   },
@@ -155,7 +155,7 @@ const SEEDED_TEST_TRANSACTIONS: TransactionRecord[] = [
     amount: 88.8,
     currency: "CNY",
     category: 4,
-    date: "2025-12-19T04:20:00.000Z",
+    date: "2025-12-19T04:20:00.000+01:00",
     description: "Seed: Health",
     type: "expense",
   },
@@ -164,7 +164,7 @@ const SEEDED_TEST_TRANSACTIONS: TransactionRecord[] = [
     amount: 12.0,
     currency: "CNY",
     category: 1,
-    date: "2025-12-24T16:00:00.000Z",
+    date: "2025-12-24T16:00:00.000+01:00",
     description: "Seed: Transparent",
     type: "expense",
   },
@@ -173,7 +173,7 @@ const SEEDED_TEST_TRANSACTIONS: TransactionRecord[] = [
     amount: 520.0,
     currency: "CNY",
     category: 7,
-    date: "2025-12-31T23:50:00.000Z",
+    date: "2025-12-31T23:50:00.000+01:00",
     description: "Seed: Others",
     type: "expense",
   },
@@ -229,7 +229,7 @@ export function generateUUID(): string {
 
 /**
  * Extract year-month key from ISO date string.
- * @param date ISO date string (e.g., "2025-12-29T10:30:00.000Z")
+ * @param date ISO date string (e.g., "2025-12-29T10:30:00.000+01:00")
  * @returns Year-month key (e.g., "2025-12")
  */
 export function getYearMonthKey(date: string): string {
