@@ -19,6 +19,7 @@ import {
   type IconTilePickerValue,
 } from "@/components/IconTilePicker";
 import { addTransaction, generateUUID } from "@/utils/dataManager";
+import { getSettings, subscribeSettings } from "@/utils/settingsManager";
 
 function pad2(n: number) {
   return String(n).padStart(2, "0");
@@ -179,6 +180,11 @@ export default function LedgerTab() {
   const [selected, setSelected] = useState<SegmentedValue>(0);
   const [selectedTile, setSelectedTile] = useState<IconTilePickerValue>(0);
   const [currencyCode, setCurrencyCode] = useState("USD");
+  const [allowedCurrencyCodes, setAllowedCurrencyCodes] = useState<string[]>([
+    "USD",
+  ]);
+  const currencyTouchedRef = useRef(false);
+  const currencyCodeRef = useRef(currencyCode);
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [descriptionFocused, setDescriptionFocused] = useState(false);
@@ -203,6 +209,48 @@ export default function LedgerTab() {
     return () => {
       showSub.remove();
       hideSub.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    currencyCodeRef.current = currencyCode;
+  }, [currencyCode]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const applyFromSettings = (s: Awaited<ReturnType<typeof getSettings>>) => {
+      const nextCodes =
+        s.bookkeepingCurrencyCodes && s.bookkeepingCurrencyCodes.length > 0
+          ? s.bookkeepingCurrencyCodes
+          : ["USD"];
+
+      setAllowedCurrencyCodes(nextCodes);
+
+      const current = currencyCodeRef.current;
+      const currentAllowed = nextCodes.some(
+        (c) => c.toUpperCase() === current.toUpperCase()
+      );
+
+      if (!currencyTouchedRef.current || !currentAllowed) {
+        setCurrencyCode(nextCodes[0] ?? "USD");
+      }
+    };
+
+    (async () => {
+      const s = await getSettings();
+      if (cancelled) return;
+      applyFromSettings(s);
+    })().catch((e) => console.error("Failed to load settings:", e));
+
+    const unsubscribe = subscribeSettings((next) => {
+      if (cancelled) return;
+      applyFromSettings(next);
+    });
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
     };
   }, []);
 
@@ -275,9 +323,13 @@ export default function LedgerTab() {
 
       <CurrencyAmountInput
         currencyCode={currencyCode}
-        onCurrencyChange={setCurrencyCode}
+        onCurrencyChange={(next) => {
+          currencyTouchedRef.current = true;
+          setCurrencyCode(next);
+        }}
         amount={amount}
         onAmountChange={setAmount}
+        currencyCodes={allowedCurrencyCodes}
         style={styles.currencyAmount}
       />
 

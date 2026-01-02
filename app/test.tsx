@@ -1,12 +1,13 @@
-import { CURRENCIES } from "@/data/currencies";
+import { CURRENCIES, getCurrencyByCode } from "@/data/currencies";
 import type { IconTilePickerValue } from "@/data/iconTileItems";
 import {
   addTransaction,
   generateUUID,
   TransactionRecord,
 } from "@/utils/dataManager";
+import { getSettings } from "@/utils/settingsManager";
 import { router } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Alert,
   FlatList,
@@ -35,9 +36,36 @@ const TRANSACTION_TYPES: ("income" | "expense")[] = ["income", "expense"];
 export default function TestPage() {
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("USD");
+  const [allowedCurrencyCodes, setAllowedCurrencyCodes] = useState<string[]>([
+    "USD",
+  ]);
   const [category, setCategory] = useState<IconTilePickerValue>(0);
   const [description, setDescription] = useState("");
   const [type, setType] = useState<"income" | "expense">("expense");
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const s = await getSettings();
+      if (cancelled) return;
+      const codes =
+        s.bookkeepingCurrencyCodes && s.bookkeepingCurrencyCodes.length > 0
+          ? s.bookkeepingCurrencyCodes
+          : ["USD"];
+      setAllowedCurrencyCodes(codes);
+      setCurrency(codes[0] ?? "USD");
+    })().catch((e) => console.error("Failed to load settings:", e));
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const allowedCurrencies = allowedCurrencyCodes
+    .map((c) => getCurrencyByCode(c))
+    .filter((c): c is NonNullable<ReturnType<typeof getCurrencyByCode>> =>
+      Boolean(c)
+    );
 
   const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
@@ -205,7 +233,9 @@ export default function TestPage() {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Select Currency</Text>
             <FlatList
-              data={CURRENCIES}
+              data={
+                allowedCurrencies.length > 0 ? allowedCurrencies : CURRENCIES
+              }
               keyExtractor={(item) => item.code}
               renderItem={({ item }) => (
                 <TouchableOpacity

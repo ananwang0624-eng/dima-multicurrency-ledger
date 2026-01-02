@@ -24,6 +24,30 @@ export default function RootLayout() {
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen
+          name="set-cur-type"
+          options={{
+            headerShown: true,
+            title: "记账币种",
+            headerStyle: {
+              backgroundColor: "rgb(128, 75, 56)",
+            },
+            headerTintColor: "#fff",
+            headerBackButtonDisplayMode: "minimal",
+          }}
+        />
+        <Stack.Screen
+          name="settings-submenu-example"
+          options={{
+            headerShown: true,
+            title: "settings-submenu-example",
+            headerStyle: {
+              backgroundColor: "rgb(128, 75, 56)",
+            },
+            headerTintColor: "#fff",
+            headerBackButtonDisplayMode: "minimal",
+          }}
+        />
+        <Stack.Screen
           name="test"
           options={{
             headerShown: true,
@@ -32,6 +56,7 @@ export default function RootLayout() {
               backgroundColor: "rgb(128, 75, 56)",
             },
             headerTintColor: "#fff",
+            headerBackButtonDisplayMode: "minimal",
           }}
         />
       </Stack>

@@ -28,20 +28,40 @@ export function CurrencyAmountInput({
   onCurrencyChange,
   amount,
   onAmountChange,
+  currencyCodes,
   style,
 }: {
   currencyCode: string;
   onCurrencyChange: (nextCode: string) => void;
   amount: string;
   onAmountChange: (nextAmount: string) => void;
+  currencyCodes?: string[];
   style?: ViewStyle;
 }) {
   const [open, setOpen] = useState(false);
   const [selection, setSelection] = useState<{ start: number; end: number }>();
 
+  const options = useMemo<Currency[]>(() => {
+    if (!currencyCodes || currencyCodes.length === 0) return CURRENCIES;
+
+    const resolved = currencyCodes
+      .filter((c): c is string => typeof c === "string")
+      .map((c) => c.toUpperCase())
+      .map((c) => getCurrencyByCode(c))
+      .filter((c): c is Currency => Boolean(c));
+
+    return resolved.length > 0 ? resolved : CURRENCIES;
+  }, [currencyCodes]);
+
   const currency = useMemo<Currency>(() => {
-    return getCurrencyByCode(currencyCode) ?? CURRENCIES[0];
-  }, [currencyCode]);
+    const normalized = currencyCode.toUpperCase();
+    return (
+      options.find((c) => c.code.toUpperCase() === normalized) ??
+      options[0] ??
+      getCurrencyByCode(normalized) ??
+      CURRENCIES[0]
+    );
+  }, [currencyCode, options]);
 
   return (
     <View style={[styles.container, style]}>
@@ -86,7 +106,7 @@ export function CurrencyAmountInput({
         <Pressable style={styles.modalBackdrop} onPress={() => setOpen(false)}>
           <Pressable style={styles.dropdown} onPress={() => undefined}>
             <FlatList
-              data={CURRENCIES}
+              data={options}
               keyExtractor={(item) => item.code}
               initialNumToRender={20}
               ItemSeparatorComponent={() => <View style={styles.separator} />}
