@@ -1,7 +1,7 @@
 import * as Crypto from "expo-crypto";
 import { File, Paths } from "expo-file-system";
 
-import { getCurrencyByCode } from "@/data/currencies";
+import { CURRENCIES, getCurrencyByCode } from "@/data/currencies";
 import type { IconTilePickerValue } from "@/data/iconTileItems";
 
 const DATA_FILE_NAME = "bookkeeping_data.json";
@@ -16,6 +16,8 @@ export type TransactionRecord = {
   description?: string;
   type: "income" | "expense";
 };
+
+export type BalancesByCurrency = Record<string, number>;
 
 const ISO_8601_RFC_3339_DATE_TIME =
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?(?:Z|[+-]\d{2}:\d{2})$/;
@@ -81,7 +83,143 @@ function validateTransactionRecord(record: TransactionRecord): void {
  */
 export type BookkeepingData = Record<string, TransactionRecord[]>;
 
+type BookkeepingFile = {
+  version: 2;
+  transactionsByMonth: BookkeepingData;
+  balances: BalancesByCurrency;
+};
+
+function createDefaultBalances(): BalancesByCurrency {
+  return Object.fromEntries(CURRENCIES.map((c) => [c.code, 0] as const));
+}
+
+function normalizeBalancesForWrite(
+  balances: BalancesByCurrency | undefined
+): BalancesByCurrency {
+  const normalized = createDefaultBalances();
+
+  if (!balances || typeof balances !== "object") return normalized;
+
+  for (const [codeRaw, value] of Object.entries(balances)) {
+    if (!codeRaw) continue;
+    const code = codeRaw.toUpperCase();
+    if (!getCurrencyByCode(code)) continue;
+    normalized[code] = Number.isFinite(value) ? Number(value) : 0;
+  }
+
+  return normalized;
+}
+
+function computeBalances(
+  transactionsByMonth: BookkeepingData
+): BalancesByCurrency {
+  const balances: BalancesByCurrency = createDefaultBalances();
+
+  for (const records of Object.values(transactionsByMonth)) {
+    if (!Array.isArray(records)) continue;
+    for (const record of records) {
+      if (!record || typeof record !== "object") continue;
+      const currency =
+        typeof record.currency === "string"
+          ? record.currency.toUpperCase()
+          : null;
+
+      if (!currency || !getCurrencyByCode(currency)) continue;
+      if (!Number.isFinite(record.amount) || record.amount <= 0) continue;
+      if (record.type !== "income" && record.type !== "expense") continue;
+
+      const signed = record.type === "income" ? record.amount : -record.amount;
+      balances[currency] = (balances[currency] ?? 0) + signed;
+    }
+  }
+
+  // Ensure new currencies added in future are present.
+  for (const c of CURRENCIES) {
+    if (!Object.prototype.hasOwnProperty.call(balances, c.code)) {
+      balances[c.code] = 0;
+    }
+  }
+
+  return balances;
+}
+
+function normalizeBookkeepingFile(raw: unknown): BookkeepingFile {
+  const defaults: BookkeepingFile = {
+    version: 2,
+    transactionsByMonth: {},
+    balances: createDefaultBalances(),
+  };
+
+  if (!raw || typeof raw !== "object") return defaults;
+
+  const record = raw as Record<string, unknown>;
+
+  // v2 (current)
+  if (record.version === 2) {
+    const transactionsByMonthRaw = record.transactionsByMonth;
+    const balancesRaw = record.balances;
+
+    const transactionsByMonth: BookkeepingData =
+      transactionsByMonthRaw && typeof transactionsByMonthRaw === "object"
+        ? (transactionsByMonthRaw as BookkeepingData)
+        : {};
+
+    const computed = computeBalances(transactionsByMonth);
+
+    const balances: BalancesByCurrency =
+      balancesRaw && typeof balancesRaw === "object"
+        ? ({
+            ...computed,
+            ...(balancesRaw as BalancesByCurrency),
+          } as BalancesByCurrency)
+        : computed;
+
+    // Sanitize numeric values.
+    for (const [code, val] of Object.entries(balances)) {
+      balances[code] = Number.isFinite(val) ? Number(val) : 0;
+    }
+
+    return {
+      version: 2,
+      transactionsByMonth,
+      balances,
+    };
+  }
+
+  // v1 (legacy): the whole file is BookkeepingData
+  const transactionsByMonth = record as unknown as BookkeepingData;
+  return {
+    version: 2,
+    transactionsByMonth,
+    balances: computeBalances(transactionsByMonth),
+  };
+}
+
+function shouldPersistNormalized(
+  raw: unknown,
+  normalized: BookkeepingFile
+): boolean {
+  if (!raw || typeof raw !== "object") return true;
+  const record = raw as Record<string, unknown>;
+  if (record.version !== 2) return true;
+  if (!record.balances || typeof record.balances !== "object") return true;
+
+  // Ensure all currencies exist.
+  const balances = record.balances as Record<string, unknown>;
+  for (const c of CURRENCIES) {
+    if (!(c.code in balances)) return true;
+  }
+
+  return false;
+}
+
 const DEFAULT_DATA: BookkeepingData = {};
+
+const DEFAULT_FILE: BookkeepingFile = {
+  version: 2,
+  transactionsByMonth: DEFAULT_DATA,
+  balances: createDefaultBalances(),
+};
 
 const SEEDED_TEST_TRANSACTIONS: TransactionRecord[] = [
   // 3 transactions on 2026-01-01
@@ -184,7 +322,7 @@ const SEEDED_TEST_TRANSACTIONS: TransactionRecord[] = [
  */
 export async function clearAllTransactions(): Promise<void> {
   await initializeDataFile();
-  await writeData(DEFAULT_DATA);
+  await writeBookkeepingFile(DEFAULT_FILE);
 }
 
 /**
@@ -201,7 +339,8 @@ export async function seedDeterministicTestTransactions(): Promise<void> {
     validateTransactionRecord(record);
   }
 
-  const data = await readData();
+  const file = await readBookkeepingFile();
+  const data = file.transactionsByMonth;
   const seededUuids = new Set(SEEDED_TEST_TRANSACTIONS.map((t) => t.uuid));
 
   for (const key of Object.keys(data)) {
@@ -217,7 +356,11 @@ export async function seedDeterministicTestTransactions(): Promise<void> {
     });
   }
 
-  await writeData(data);
+  await writeBookkeepingFile({
+    version: 2,
+    transactionsByMonth: data,
+    balances: computeBalances(data),
+  });
 }
 
 /**
@@ -241,23 +384,35 @@ export function getYearMonthKey(date: string): string {
  * Automatically groups by year-month and sorts by date (descending).
  */
 export async function addTransaction(record: TransactionRecord): Promise<void> {
-  validateTransactionRecord(record);
+  const normalizedRecord: TransactionRecord = {
+    ...record,
+    currency: record.currency.toUpperCase(),
+  };
+  validateTransactionRecord(normalizedRecord);
 
-  const data = await readData();
-  const key = getYearMonthKey(record.date);
+  const file = await readBookkeepingFile();
+  const data = file.transactionsByMonth;
+  const key = getYearMonthKey(normalizedRecord.date);
 
   if (!data[key]) {
     data[key] = [];
   }
 
-  data[key].push(record);
+  data[key].push(normalizedRecord);
 
   // Sort by date in descending order (newest first)
   data[key].sort((a, b) => {
     return new Date(b.date).getTime() - new Date(a.date).getTime();
   });
 
-  await writeData(data);
+  const code = normalizedRecord.currency.toUpperCase();
+  const signed =
+    normalizedRecord.type === "income"
+      ? normalizedRecord.amount
+      : -normalizedRecord.amount;
+  file.balances[code] = (file.balances[code] ?? 0) + signed;
+
+  await writeBookkeepingFile(file);
 }
 
 /**
@@ -268,8 +423,8 @@ export async function addTransaction(record: TransactionRecord): Promise<void> {
 export async function getTransactionsByMonth(
   yearMonth: string
 ): Promise<TransactionRecord[]> {
-  const data = await readData();
-  return data[yearMonth] || [];
+  const file = await readBookkeepingFile();
+  return file.transactionsByMonth[yearMonth] || [];
 }
 
 /**
@@ -277,8 +432,8 @@ export async function getTransactionsByMonth(
  * @returns Array of year-month keys sorted in descending order
  */
 export async function getAvailableMonths(): Promise<string[]> {
-  const data = await readData();
-  return Object.keys(data).sort().reverse();
+  const file = await readBookkeepingFile();
+  return Object.keys(file.transactionsByMonth).sort().reverse();
 }
 
 /**
@@ -288,13 +443,55 @@ export async function getAvailableMonths(): Promise<string[]> {
 export async function initializeDataFile(): Promise<void> {
   try {
     if (!dataFile.exists) {
-      await dataFile.write(JSON.stringify(DEFAULT_DATA, null, 2));
+      await dataFile.write(JSON.stringify(DEFAULT_FILE, null, 2));
       console.log("✅ Data file created:", dataFile.uri);
     } else {
-      console.log("✅ Data file already exists:", dataFile.uri);
+      // Best-effort migration: ensure schema includes balances.
+      try {
+        const content = await dataFile.text();
+        const parsed = JSON.parse(content) as unknown;
+        const normalized = normalizeBookkeepingFile(parsed);
+        if (shouldPersistNormalized(parsed, normalized)) {
+          await dataFile.write(JSON.stringify(normalized, null, 2));
+          console.log("✅ Data file migrated:", dataFile.uri);
+        } else {
+          console.log("✅ Data file already exists:", dataFile.uri);
+        }
+      } catch (e) {
+        console.warn("⚠️ Failed to migrate data file, keeping as-is:", e);
+      }
     }
   } catch (error) {
     console.error("❌ Error initializing data file:", error);
+    throw error;
+  }
+}
+
+async function readBookkeepingFile(): Promise<BookkeepingFile> {
+  try {
+    const content = await dataFile.text();
+    const parsed = JSON.parse(content) as unknown;
+    return normalizeBookkeepingFile(parsed);
+  } catch (error) {
+    console.error("❌ Error reading data:", error);
+    return DEFAULT_FILE;
+  }
+}
+
+async function writeBookkeepingFile(file: BookkeepingFile): Promise<void> {
+  try {
+    const transactionsByMonth = file.transactionsByMonth ?? {};
+    const normalized: BookkeepingFile = {
+      version: 2,
+      transactionsByMonth,
+      balances:
+        file.balances !== undefined
+          ? normalizeBalancesForWrite(file.balances)
+          : computeBalances(transactionsByMonth),
+    };
+    await dataFile.write(JSON.stringify(normalized, null, 2));
+  } catch (error) {
+    console.error("❌ Error writing data:", error);
     throw error;
   }
 }
@@ -303,25 +500,47 @@ export async function initializeDataFile(): Promise<void> {
  * Read bookkeeping data from the file.
  */
 export async function readData(): Promise<BookkeepingData> {
-  try {
-    const content = await dataFile.text();
-    return JSON.parse(content);
-  } catch (error) {
-    console.error("❌ Error reading data:", error);
-    return DEFAULT_DATA;
-  }
+  const file = await readBookkeepingFile();
+  return file.transactionsByMonth;
 }
 
 /**
  * Write bookkeeping data to the file.
  */
 export async function writeData(data: BookkeepingData): Promise<void> {
-  try {
-    await dataFile.write(JSON.stringify(data, null, 2));
-  } catch (error) {
-    console.error("❌ Error writing data:", error);
-    throw error;
+  await writeBookkeepingFile({
+    version: 2,
+    transactionsByMonth: data,
+    balances: computeBalances(data),
+  });
+}
+
+export async function getBalances(): Promise<BalancesByCurrency> {
+  const file = await readBookkeepingFile();
+  return file.balances;
+}
+
+export async function getBalance(currencyCode: string): Promise<number> {
+  const file = await readBookkeepingFile();
+  const code = currencyCode.toUpperCase();
+  return file.balances[code] ?? 0;
+}
+
+export async function setBalance(
+  currencyCode: string,
+  nextBalance: number
+): Promise<void> {
+  const code = currencyCode.toUpperCase();
+  if (!getCurrencyByCode(code)) {
+    throw new Error(`Unsupported currency code '${currencyCode}'`);
   }
+  if (!Number.isFinite(nextBalance)) {
+    throw new Error("Balance must be a finite number");
+  }
+
+  const file = await readBookkeepingFile();
+  file.balances[code] = nextBalance;
+  await writeBookkeepingFile(file);
 }
 
 /**

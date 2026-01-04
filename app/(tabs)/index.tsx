@@ -1,16 +1,17 @@
-import { Text, View } from "react-native";
+import { View } from "react-native";
+
+import BalanceSummaryCard from "@/components/BalanceSummaryCard";
 
 export default function HomeTab() {
   return (
     <View
       style={{
         flex: 1,
-        alignItems: "center",
-        justifyContent: "center",
         backgroundColor: "rgb(253, 247, 245)",
+        padding: 20,
       }}
     >
-      <Text>Overview</Text>
+      <BalanceSummaryCard />
     </View>
   );
 }
