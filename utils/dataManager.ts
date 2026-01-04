@@ -7,6 +7,30 @@ import type { IconTilePickerValue } from "@/data/iconTileItems";
 const DATA_FILE_NAME = "bookkeeping_data.json";
 const dataFile = new File(Paths.document, DATA_FILE_NAME);
 
+type DataChangeListener = () => void;
+const dataChangeListeners = new Set<DataChangeListener>();
+
+function notifyDataChange(): void {
+  for (const listener of dataChangeListeners) {
+    try {
+      listener();
+    } catch (e) {
+      console.warn("⚠️ Data change listener failed:", e);
+    }
+  }
+}
+
+/**
+ * Subscribe to bookkeeping data changes.
+ * Triggered after the data file is successfully written.
+ */
+export function subscribeDataChanges(listener: DataChangeListener): () => void {
+  dataChangeListeners.add(listener);
+  return () => {
+    dataChangeListeners.delete(listener);
+  };
+}
+
 export type TransactionRecord = {
   uuid: string;
   amount: number;
@@ -490,6 +514,7 @@ async function writeBookkeepingFile(file: BookkeepingFile): Promise<void> {
           : computeBalances(transactionsByMonth),
     };
     await dataFile.write(JSON.stringify(normalized, null, 2));
+    notifyDataChange();
   } catch (error) {
     console.error("❌ Error writing data:", error);
     throw error;
