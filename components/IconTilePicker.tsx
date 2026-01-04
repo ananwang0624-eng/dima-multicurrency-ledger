@@ -64,6 +64,7 @@ export function IconTilePicker({
                   {
                     width: tileSize,
                     height: tileSize,
+                    backgroundColor: item.bgColor ?? COLORS.tileBg,
                     opacity: pressed ? 0.9 : 1,
                   },
                 ]}
