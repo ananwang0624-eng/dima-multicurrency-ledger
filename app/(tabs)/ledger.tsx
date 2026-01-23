@@ -57,7 +57,7 @@ const SEGMENTED = {
   radius: 14,
 } as const;
 
-type SegmentedValue = 0 | 1;
+type SegmentedValue = 0 | 1 | 2;
 
 function LedgerTypeSegmented({
   value,
@@ -80,19 +80,19 @@ function LedgerTypeSegmented({
 
   const segmentedWidth = useMemo(
     () => Math.max(0, (windowWidth - 32) / 1.5),
-    [windowWidth]
+    [windowWidth],
   );
 
   const indicatorWidth = useMemo(() => {
     const innerWidth = Math.max(0, segmentedWidth - SEGMENTED.padding * 2);
-    return innerWidth / 2;
+    return innerWidth / 3;
   }, [segmentedWidth]);
 
   const indicatorTranslateX = useMemo(() => {
     if (segmentedWidth <= 0) return 0;
     return position.interpolate({
-      inputRange: [0, 1],
-      outputRange: [0, indicatorWidth],
+      inputRange: [0, 1, 2],
+      outputRange: [0, indicatorWidth, indicatorWidth * 2],
       extrapolate: "clamp",
     });
   }, [position, segmentedWidth, indicatorWidth]);
@@ -106,7 +106,7 @@ function LedgerTypeSegmented({
         useNativeDriver: true,
       }).start();
     },
-    [onChange, position]
+    [onChange, position],
   );
 
   const panResponder = useMemo(
@@ -125,7 +125,8 @@ function LedgerTypeSegmented({
         },
         onPanResponderRelease: () => {
           position.stopAnimation((val) => {
-            const nextIndex: SegmentedValue = val >= 0.5 ? 1 : 0;
+            const nextIndex: SegmentedValue =
+              val >= 1.5 ? 2 : val >= 0.5 ? 1 : 0;
             goTo(nextIndex);
           });
         },
@@ -133,7 +134,7 @@ function LedgerTypeSegmented({
           goTo(value);
         },
       }),
-    [goTo, indicatorWidth, position, value]
+    [goTo, indicatorWidth, position, value],
   );
 
   return (
@@ -172,6 +173,16 @@ function LedgerTypeSegmented({
           收入
         </Text>
       </Pressable>
+      <Pressable style={styles.segmentButton} onPress={() => goTo(2)}>
+        <Text
+          style={[
+            styles.segmentText,
+            value === 2 ? styles.segmentTextActive : styles.segmentTextInactive,
+          ]}
+        >
+          换汇
+        </Text>
+      </Pressable>
     </View>
   );
 }
@@ -186,6 +197,11 @@ export default function LedgerTab() {
   const currencyTouchedRef = useRef(false);
   const currencyCodeRef = useRef(currencyCode);
   const [amount, setAmount] = useState("");
+
+  // 换汇模式的第二个货币输入
+  const [currencyCode2, setCurrencyCode2] = useState("USD");
+  const [amount2, setAmount2] = useState("");
+
   const [description, setDescription] = useState("");
   const [descriptionFocused, setDescriptionFocused] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
@@ -229,11 +245,12 @@ export default function LedgerTab() {
 
       const current = currencyCodeRef.current;
       const currentAllowed = nextCodes.some(
-        (c) => c.toUpperCase() === current.toUpperCase()
+        (c) => c.toUpperCase() === current.toUpperCase(),
       );
 
       if (!currencyTouchedRef.current || !currentAllowed) {
         setCurrencyCode(nextCodes[0] ?? "USD");
+        setCurrencyCode2(nextCodes[0] ?? "USD");
       }
     };
 
@@ -260,46 +277,117 @@ export default function LedgerTab() {
     return Number.isFinite(n) ? n : NaN;
   }, [amount]);
 
+  const amountNumber2 = useMemo(() => {
+    const normalized = amount2.replace(/,/g, "").trim();
+    const n = Number.parseFloat(normalized);
+    return Number.isFinite(n) ? n : NaN;
+  }, [amount2]);
+
   const canSubmit = useMemo(() => {
     if (submitting) return false;
-    if (!Number.isFinite(amountNumber) || amountNumber <= 0) return false;
+    if (selected === 2) {
+      // 换汇模式：需要两个金额都有效
+      if (!Number.isFinite(amountNumber) || amountNumber <= 0) return false;
+      if (!Number.isFinite(amountNumber2) || amountNumber2 <= 0) return false;
+    } else {
+      // 支出/收入模式
+      if (!Number.isFinite(amountNumber) || amountNumber <= 0) return false;
+    }
     return true;
-  }, [amountNumber, submitting]);
+  }, [amountNumber, amountNumber2, submitting, selected]);
 
   const onSubmit = useCallback(async () => {
-    if (!Number.isFinite(amountNumber) || amountNumber <= 0) {
-      Alert.alert("金额无效", "请输入一个大于 0 的金额。");
-      return;
-    }
+    if (selected === 2) {
+      // 换汇模式
+      if (!Number.isFinite(amountNumber) || amountNumber <= 0) {
+        Alert.alert("金额无效", "请输入有效的第一个金额。");
+        return;
+      }
+      if (!Number.isFinite(amountNumber2) || amountNumber2 <= 0) {
+        Alert.alert("金额无效", "请输入有效的第二个金额。");
+        return;
+      }
 
-    const localDate = new Date(year, month - 1, day, hour, minute, 0, 0);
-    const record = {
-      uuid: generateUUID(),
-      amount: amountNumber,
-      currency: currencyCode,
-      category: selectedTile,
-      date: toRfc3339Local(localDate),
-      description:
-        description.trim().length > 0 ? description.trim() : undefined,
-      type: selected === 1 ? ("income" as const) : ("expense" as const),
-    };
+      const localDate = new Date(year, month - 1, day, hour, minute, 0, 0);
+      const dateStr = toRfc3339Local(localDate);
+      const desc =
+        description.trim().length > 0 ? description.trim() : undefined;
 
-    try {
-      setSubmitting(true);
-      Keyboard.dismiss();
-      await addTransaction(record);
-      setAmount("");
-      setDescription("");
-      Alert.alert("已提交", "记录已保存。");
-    } catch (e) {
-      const message = e instanceof Error ? e.message : "提交失败";
-      Alert.alert("提交失败", message);
-    } finally {
-      setSubmitting(false);
+      // 第一条记录：第一种货币的支出
+      const record1 = {
+        uuid: generateUUID(),
+        amount: amountNumber,
+        currency: currencyCode,
+        category: 8 as IconTilePickerValue, // Exchange category
+        date: dateStr,
+        description: desc,
+        type: "expense" as const,
+      };
+
+      // 第二条记录：第二种货币的收入
+      const record2 = {
+        uuid: generateUUID(),
+        amount: amountNumber2,
+        currency: currencyCode2,
+        category: 8 as IconTilePickerValue, // Exchange category
+        date: dateStr,
+        description: desc,
+        type: "income" as const,
+      };
+
+      try {
+        setSubmitting(true);
+        Keyboard.dismiss();
+        await addTransaction(record1);
+        await addTransaction(record2);
+        setAmount("");
+        setAmount2("");
+        setDescription("");
+        Alert.alert("已提交", "换汇记录已保存。");
+      } catch (e) {
+        const message = e instanceof Error ? e.message : "提交失败";
+        Alert.alert("提交失败", message);
+      } finally {
+        setSubmitting(false);
+      }
+    } else {
+      // 支出/收入模式
+      if (!Number.isFinite(amountNumber) || amountNumber <= 0) {
+        Alert.alert("金额无效", "请输入一个大于 0 的金额。");
+        return;
+      }
+
+      const localDate = new Date(year, month - 1, day, hour, minute, 0, 0);
+      const record = {
+        uuid: generateUUID(),
+        amount: amountNumber,
+        currency: currencyCode,
+        category: selectedTile,
+        date: toRfc3339Local(localDate),
+        description:
+          description.trim().length > 0 ? description.trim() : undefined,
+        type: selected === 1 ? ("income" as const) : ("expense" as const),
+      };
+
+      try {
+        setSubmitting(true);
+        Keyboard.dismiss();
+        await addTransaction(record);
+        setAmount("");
+        setDescription("");
+        Alert.alert("已提交", "记录已保存。");
+      } catch (e) {
+        const message = e instanceof Error ? e.message : "提交失败";
+        Alert.alert("提交失败", message);
+      } finally {
+        setSubmitting(false);
+      }
     }
   }, [
     amountNumber,
+    amountNumber2,
     currencyCode,
+    currencyCode2,
     day,
     description,
     hour,
@@ -308,6 +396,7 @@ export default function LedgerTab() {
     selected,
     selectedTile,
     setAmount,
+    setAmount2,
     setDescription,
     year,
   ]);
@@ -333,10 +422,30 @@ export default function LedgerTab() {
         style={styles.currencyAmount}
       />
 
+      {selected === 2 ? (
+        <>
+          <View style={styles.exchangeArrowContainer}>
+            <Text style={styles.exchangeArrow}>↓</Text>
+          </View>
+          <CurrencyAmountInput
+            currencyCode={currencyCode2}
+            onCurrencyChange={setCurrencyCode2}
+            amount={amount2}
+            onAmountChange={setAmount2}
+            currencyCodes={allowedCurrencyCodes}
+            style={styles.currencyAmount}
+          />
+        </>
+      ) : null}
+
       <View style={[styles.divider, styles.dividerNoTopMargin]} />
-      <Text style={styles.categoryLabel}>Select Category</Text>
-      <IconTilePicker value={selectedTile} onChange={setSelectedTile} />
-      <View style={[styles.divider, styles.dividerNoTopMargin]} />
+      {selected !== 2 ? (
+        <>
+          <Text style={styles.categoryLabel}>Select Category</Text>
+          <IconTilePicker value={selectedTile} onChange={setSelectedTile} />
+          <View style={[styles.divider, styles.dividerNoTopMargin]} />
+        </>
+      ) : null}
       <Text style={styles.categoryLabel}>Select Date</Text>
       <DateTimePicker
         year={year}
@@ -540,5 +649,15 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "800",
     color: COLORS.activeText,
+  },
+  exchangeArrowContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginVertical: 8,
+  },
+  exchangeArrow: {
+    fontSize: 32,
+    fontWeight: "700",
+    color: COLORS.active,
   },
 });
