@@ -5,6 +5,7 @@ import {
   Keyboard,
   PanResponder,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -402,11 +403,7 @@ export default function LedgerTab() {
   ]);
 
   return (
-    <Pressable
-      style={styles.container}
-      onPress={Keyboard.dismiss}
-      accessible={false}
-    >
+    <View style={styles.container}>
       <LedgerTypeSegmented value={selected} onChange={setSelected} />
       <View style={styles.divider} />
 
@@ -517,7 +514,7 @@ export default function LedgerTab() {
           </View>
         </>
       ) : null}
-    </Pressable>
+    </View>
   );
 }
 

@@ -1,74 +1,107 @@
 import { useFocusEffect } from "@react-navigation/native";
-import { useCallback, useEffect, useState } from "react";
-import { View } from "react-native";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 import BalanceSummaryCard from "@/components/BalanceSummaryCard";
+import { MonthYearPicker } from "@/components/MonthYearPicker";
 import TransactionRecordItem from "@/components/TransactionRecordItem";
 import {
-  getAvailableMonths,
   getTransactionsByMonth,
   subscribeDataChanges,
   type TransactionRecord,
 } from "@/utils/dataManager";
 
 export default function HomeTab() {
-  const [recent, setRecent] = useState<TransactionRecord[]>([]);
+  const now = useMemo(() => new Date(), []);
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
+  const [records, setRecords] = useState<TransactionRecord[]>([]);
 
-  const refreshRecent = useCallback(async () => {
-    const months = await getAvailableMonths();
-    const next: TransactionRecord[] = [];
-
-    for (const month of months) {
-      if (next.length >= 10) break;
-      const list = await getTransactionsByMonth(month);
-      for (const record of list) {
-        next.push(record);
-        if (next.length >= 10) break;
-      }
-    }
-
-    setRecent(next);
-  }, []);
+  const refreshRecords = useCallback(async () => {
+    const yearMonth = `${selectedYear}-${String(selectedMonth).padStart(2, "0")}`;
+    const list = await getTransactionsByMonth(yearMonth);
+    setRecords(list);
+  }, [selectedYear, selectedMonth]);
 
   useEffect(() => {
-    refreshRecent().catch((e) => console.error("Failed to load recent:", e));
-  }, [refreshRecent]);
+    refreshRecords().catch((e) => console.error("Failed to load records:", e));
+  }, [refreshRecords]);
 
   useEffect(() => {
     const unsubscribe = subscribeDataChanges(() => {
-      refreshRecent().catch((e) =>
-        console.error("Failed to refresh recent after data change:", e)
+      refreshRecords().catch((e) =>
+        console.error("Failed to refresh records after data change:", e),
       );
     });
 
     return unsubscribe;
-  }, [refreshRecent]);
+  }, [refreshRecords]);
 
   useFocusEffect(
     useCallback(() => {
-      refreshRecent().catch((e) =>
-        console.error("Failed to refresh recent:", e)
+      refreshRecords().catch((e) =>
+        console.error("Failed to refresh records:", e),
       );
-    }, [refreshRecent])
+    }, [refreshRecords]),
   );
 
   return (
-    <View
-      style={{
-        flex: 1,
-        backgroundColor: "rgb(253, 247, 245)",
-        padding: 20,
-      }}
-    >
-      <BalanceSummaryCard />
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <BalanceSummaryCard />
 
-      <View style={{ height: 16 }} />
+        <View style={{ height: 16 }} />
 
-      <View style={{ gap: 12 }}>
-        {recent.map((record) => (
-          <TransactionRecordItem key={record.uuid} record={record} />
-        ))}
+        <MonthYearPicker
+          year={selectedYear}
+          month={selectedMonth}
+          recordCount={records.length}
+          onYearChange={setSelectedYear}
+          onMonthChange={setSelectedMonth}
+        />
+
+        <View style={{ height: 8 }} />
       </View>
+
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+      >
+        <View style={{ gap: 12 }}>
+          {records.length > 0 ? (
+            records.map((record) => (
+              <TransactionRecordItem key={record.uuid} record={record} />
+            ))
+          ) : (
+            <Text style={styles.emptyText}>暂无记录</Text>
+          )}
+        </View>
+      </ScrollView>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "rgb(253, 247, 245)",
+  },
+  header: {
+    padding: 20,
+    paddingBottom: 0,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 20,
+    paddingTop: 0,
+  },
+  emptyText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "rgb(133, 115, 110)",
+    textAlign: "center",
+    paddingVertical: 40,
+  },
+});

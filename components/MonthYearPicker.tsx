@@ -19,15 +19,8 @@ const COLORS = {
   overlay: "rgba(0,0,0,0.25)",
 } as const;
 
-type DateTimeField = "year" | "month" | "day" | "hour" | "minute";
-
 function pad2(n: number) {
   return String(n).padStart(2, "0");
-}
-
-function daysInMonth(year: number, month: number) {
-  // month: 1-12
-  return new Date(year, month, 0).getDate();
 }
 
 function rangeInclusive(start: number, end: number) {
@@ -35,6 +28,8 @@ function rangeInclusive(start: number, end: number) {
   for (let i = start; i <= end; i += 1) out.push(i);
   return out;
 }
+
+type FieldType = "year" | "month";
 
 function WheelPicker({
   values,
@@ -78,7 +73,7 @@ function WheelPicker({
         onValueChange(nextValue);
       }
     },
-    [itemHeight, onValueChange, selectedValue, values]
+    [itemHeight, onValueChange, selectedValue, values],
   );
 
   const renderItem = useCallback(
@@ -99,7 +94,7 @@ function WheelPicker({
         </View>
       );
     },
-    [format, itemHeight, selectedValue]
+    [format, itemHeight, selectedValue],
   );
 
   return (
@@ -141,43 +136,26 @@ function WheelPicker({
   );
 }
 
-export function DateTimePicker({
+export function MonthYearPicker({
   year,
   month,
-  day,
-  hour,
-  minute,
+  recordCount,
   onYearChange,
   onMonthChange,
-  onDayChange,
-  onHourChange,
-  onMinuteChange,
   minYear = 2000,
   maxYear = 2099,
   style,
 }: {
   year: number;
   month: number;
-  day: number;
-  hour: number;
-  minute: number;
+  recordCount: number;
   onYearChange: (next: number) => void;
   onMonthChange: (next: number) => void;
-  onDayChange: (next: number) => void;
-  onHourChange: (next: number) => void;
-  onMinuteChange: (next: number) => void;
   minYear?: number;
   maxYear?: number;
   style?: ViewStyle;
 }) {
-  const [activeField, setActiveField] = useState<DateTimeField | null>(null);
-
-  const maxDay = useMemo(() => daysInMonth(year, month), [year, month]);
-
-  // If parent changes year/month and day goes out of range, clamp down to max.
-  useEffect(() => {
-    if (day > maxDay) onDayChange(maxDay);
-  }, [day, maxDay, onDayChange]);
+  const [activeField, setActiveField] = useState<FieldType | null>(null);
 
   const years = useMemo(() => {
     const start = Math.min(minYear, maxYear);
@@ -186,46 +164,12 @@ export function DateTimePicker({
   }, [maxYear, minYear]);
 
   const months = useMemo(() => rangeInclusive(1, 12), []);
-  const days = useMemo(() => rangeInclusive(1, maxDay), [maxDay]);
-  const hours = useMemo(() => rangeInclusive(0, 23), []);
-  const minutes = useMemo(() => rangeInclusive(0, 59), []);
 
-  const open = useCallback((field: DateTimeField) => setActiveField(field), []);
+  const open = useCallback((field: FieldType) => setActiveField(field), []);
   const close = useCallback(() => setActiveField(null), []);
 
-  const onPickYear = useCallback(
-    (nextYear: number) => {
-      onYearChange(nextYear);
-      const nextMax = daysInMonth(nextYear, month);
-      if (day > nextMax) onDayChange(nextMax);
-    },
-    [day, month, onDayChange, onYearChange]
-  );
-
-  const onPickMonth = useCallback(
-    (nextMonth: number) => {
-      onMonthChange(nextMonth);
-      const nextMax = daysInMonth(year, nextMonth);
-      if (day > nextMax) onDayChange(nextMax);
-    },
-    [day, onDayChange, onMonthChange, year]
-  );
-
   const modalTitle = useMemo(() => {
-    switch (activeField) {
-      case "year":
-        return "选择年份";
-      case "month":
-        return "选择月份";
-      case "day":
-        return "选择日期";
-      case "hour":
-        return "选择小时";
-      case "minute":
-        return "选择分钟";
-      default:
-        return "";
-    }
+    return activeField === "year" ? "选择年份" : "选择月份";
   }, [activeField]);
 
   const wheelConfig = useMemo(() => {
@@ -234,113 +178,51 @@ export function DateTimePicker({
       return {
         values: years,
         selectedValue: year,
-        onValueChange: onPickYear,
+        onValueChange: onYearChange,
         format: (v: number) => String(v),
       };
     }
-    if (activeField === "month") {
-      return {
-        values: months,
-        selectedValue: month,
-        onValueChange: onPickMonth,
-        format: (v: number) => pad2(v),
-      };
-    }
-    if (activeField === "day") {
-      return {
-        values: days,
-        selectedValue: Math.min(day, maxDay),
-        onValueChange: onDayChange,
-        format: (v: number) => pad2(v),
-      };
-    }
-    if (activeField === "hour") {
-      return {
-        values: hours,
-        selectedValue: hour,
-        onValueChange: onHourChange,
-        format: (v: number) => pad2(v),
-      };
-    }
-
     return {
-      values: minutes,
-      selectedValue: minute,
-      onValueChange: onMinuteChange,
+      values: months,
+      selectedValue: month,
+      onValueChange: onMonthChange,
       format: (v: number) => pad2(v),
     };
-  }, [
-    activeField,
-    day,
-    days,
-    hour,
-    hours,
-    maxDay,
-    minute,
-    minutes,
-    month,
-    months,
-    onDayChange,
-    onHourChange,
-    onMinuteChange,
-    onPickMonth,
-    onPickYear,
-    year,
-    years,
-  ]);
+  }, [activeField, month, months, onMonthChange, onYearChange, year, years]);
 
   return (
-    <View style={[styles.row, style]}>
-      <Pressable
-        style={({ pressed }) => [
-          styles.box,
-          pressed ? styles.boxPressed : null,
-        ]}
-        onPress={() => open("year")}
-      >
-        <Text style={styles.boxLabel}>year</Text>
-        <Text style={styles.boxText}>{String(year)}</Text>
-      </Pressable>
-      <Pressable
-        style={({ pressed }) => [
-          styles.box,
-          pressed ? styles.boxPressed : null,
-        ]}
-        onPress={() => open("month")}
-      >
-        <Text style={styles.boxLabel}>month</Text>
-        <Text style={styles.boxText}>{pad2(month)}</Text>
-      </Pressable>
-      <Pressable
-        style={({ pressed }) => [
-          styles.box,
-          pressed ? styles.boxPressed : null,
-        ]}
-        onPress={() => open("day")}
-      >
-        <Text style={styles.boxLabel}>day</Text>
-        <Text style={styles.boxText}>{pad2(Math.min(day, maxDay))}</Text>
-      </Pressable>
-      <Pressable
-        style={({ pressed }) => [
-          styles.box,
-          pressed ? styles.boxPressed : null,
-        ]}
-        onPress={() => open("hour")}
-      >
-        <Text style={styles.boxLabel}>hour</Text>
-        <Text style={styles.boxText}>{pad2(hour)}</Text>
-      </Pressable>
-      <Pressable
-        style={({ pressed }) => [
-          styles.box,
-          pressed ? styles.boxPressed : null,
-        ]}
-        onPress={() => open("minute")}
-      >
-        <Text style={styles.boxLabel}>min</Text>
-        <Text style={styles.boxText}>{pad2(minute)}</Text>
-      </Pressable>
+    <View style={[styles.container, style]}>
+      <View style={styles.row}>
+        <Text style={styles.label}>记录</Text>
+
+        <View style={styles.pickerRow}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.pickerBox,
+              pressed ? styles.pickerBoxPressed : null,
+            ]}
+            onPress={() => open("year")}
+          >
+            <Text style={styles.pickerText}>{String(year)}</Text>
+          </Pressable>
+
+          <Text style={styles.separator}>年</Text>
+
+          <Pressable
+            style={({ pressed }) => [
+              styles.pickerBox,
+              pressed ? styles.pickerBoxPressed : null,
+            ]}
+            onPress={() => open("month")}
+          >
+            <Text style={styles.pickerText}>{pad2(month)}</Text>
+          </Pressable>
+
+          <Text style={styles.separator}>月</Text>
+        </View>
+
+        <Text style={styles.count}>({recordCount}条)</Text>
+      </View>
 
       <Modal
         visible={activeField !== null}
@@ -374,86 +256,92 @@ export function DateTimePicker({
 }
 
 const styles = StyleSheet.create({
+  container: {
+    marginBottom: 12,
+  },
   row: {
     flexDirection: "row",
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  box: {
-    flex: 1,
-    minWidth: 0,
-    height: 56,
-    borderRadius: 14,
-    backgroundColor: COLORS.panelBg,
-    borderWidth: 2,
-    borderColor: "transparent",
     alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 6,
+    gap: 8,
   },
-  boxPressed: {
-    opacity: 0.9,
-    borderColor: COLORS.active,
-  },
-  boxLabel: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: COLORS.inactiveText,
-    lineHeight: 12,
-    marginBottom: 2,
-  },
-  boxText: {
+  label: {
     fontSize: 16,
     fontWeight: "700",
     color: COLORS.active,
   },
-
+  pickerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  pickerBox: {
+    backgroundColor: COLORS.panelBg,
+    borderRadius: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+    borderWidth: 2,
+    borderColor: "transparent",
+    minWidth: 50,
+    alignItems: "center",
+  },
+  pickerBoxPressed: {
+    borderColor: COLORS.active,
+    opacity: 0.9,
+  },
+  pickerText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: COLORS.active,
+  },
+  separator: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: COLORS.inactiveText,
+  },
+  count: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: COLORS.inactiveText,
+  },
   modalOverlay: {
     flex: 1,
-    backgroundColor: COLORS.overlay,
     justifyContent: "flex-end",
   },
   modalBackdrop: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: COLORS.overlay,
   },
   modalPanel: {
-    backgroundColor: COLORS.background,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    paddingBottom: 18,
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 34,
   },
   modalHeader: {
-    paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: 12,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
   },
   modalTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: COLORS.inactiveText,
+    fontSize: 18,
+    fontWeight: "800",
+    color: COLORS.active,
   },
   doneButton: {
-    paddingHorizontal: 10,
+    paddingHorizontal: 16,
     paddingVertical: 6,
-    borderRadius: 10,
-    backgroundColor: COLORS.panelBg,
   },
   doneButtonText: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "700",
     color: COLORS.active,
   },
   modalDivider: {
     height: 2,
     backgroundColor: COLORS.divider,
-    alignSelf: "stretch",
-    width: "100%",
   },
-
   wheelContainer: {
     alignSelf: "stretch",
   },

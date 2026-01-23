@@ -11,13 +11,6 @@ const HEADER_COLOR = "rgb(128, 75, 56)";
 const DIVIDER_COLOR = "rgb(239, 222, 216)";
 const DARK_GRAY = "rgba(54, 48, 46, 1)";
 
-const MONO_FONT_FAMILY = Platform.select({
-  ios: "SFMono-Regular",
-  android: "monospace",
-  web: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
-  default: "monospace",
-});
-
 function toFixed2(value: number): string {
   const normalized = Math.abs(value) < 1e-9 ? 0 : value;
   return normalized.toFixed(2);
@@ -53,8 +46,8 @@ export default function BalanceSummaryCard() {
       new Set(
         nextCodesRaw
           .filter((c): c is string => typeof c === "string")
-          .map((c) => c.toUpperCase())
-      )
+          .map((c) => c.toUpperCase()),
+      ),
     );
 
     setCurrencyCodes(nextCodes.length > 0 ? nextCodes : ["USD"]);
@@ -86,8 +79,8 @@ export default function BalanceSummaryCard() {
         new Set(
           nextCodesRaw
             .filter((c): c is string => typeof c === "string")
-            .map((c) => c.toUpperCase())
-        )
+            .map((c) => c.toUpperCase()),
+        ),
       );
 
       setCurrencyCodes(nextCodes.length > 0 ? nextCodes : ["USD"]);
@@ -114,7 +107,7 @@ export default function BalanceSummaryCard() {
   useFocusEffect(
     useCallback(() => {
       refresh().catch((e) => console.error("Failed to refresh balances:", e));
-    }, [refresh])
+    }, [refresh]),
   );
 
   const rows = useMemo(() => {
@@ -133,10 +126,14 @@ export default function BalanceSummaryCard() {
     <View style={styles.card}>
       <Text style={styles.title}>总余额</Text>
       <View style={{ height: 10 }} />
-      {rows.map((row) => (
-        <Text key={row.code} style={styles.row}>
-          {row.code}: <Text style={styles.rowMono}>{row.amountText}</Text>
-        </Text>
+      {rows.map((row, index) => (
+        <View key={row.code}>
+          <View style={styles.rowContainer}>
+            <Text style={styles.rowCode}>{row.code}:</Text>
+            <Text style={styles.rowAmount}>{row.amountText}</Text>
+          </View>
+          {index < rows.length - 1 && <View style={styles.divider} />}
+        </View>
       ))}
     </View>
   );
@@ -156,16 +153,25 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: DARK_GRAY,
   },
-  row: {
-    fontSize: 26,
-    fontWeight: "800",
-    color: HEADER_COLOR,
+  rowContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginTop: 6,
   },
-  rowMono: {
+  divider: {
+    height: 1,
+    backgroundColor: DIVIDER_COLOR,
+    marginTop: 6,
+  },
+  rowCode: {
     fontSize: 26,
     fontWeight: "800",
     color: HEADER_COLOR,
-    fontFamily: MONO_FONT_FAMILY,
+  },
+  rowAmount: {
+    fontSize: 26,
+    fontWeight: "800",
+    color: HEADER_COLOR,
   },
 });
