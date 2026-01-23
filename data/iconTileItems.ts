@@ -1,6 +1,6 @@
 import { Asset } from "expo-asset";
 
-export type IconTilePickerValue = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
+export type IconTilePickerValue = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
 export type IconTileItem = {
   value: IconTilePickerValue;
@@ -10,26 +10,26 @@ export type IconTileItem = {
 };
 
 const diningIconUri = Asset.fromModule(
-  require("../assets/icon/Dining.svg")
+  require("../assets/icon/Dining.svg"),
 ).uri;
 const transportIconUri = Asset.fromModule(
-  require("../assets/icon/Transport.svg")
+  require("../assets/icon/Transport.svg"),
 ).uri;
 const shoppingIconUri = Asset.fromModule(
-  require("../assets/icon/Shopping.svg")
+  require("../assets/icon/Shopping.svg"),
 ).uri;
 const gamingIconUri = Asset.fromModule(
-  require("../assets/icon/Gaming.svg")
+  require("../assets/icon/Gaming.svg"),
 ).uri;
 const healthIconUri = Asset.fromModule(
-  require("../assets/icon/Health.svg")
+  require("../assets/icon/Health.svg"),
 ).uri;
 const educationIconUri = Asset.fromModule(
-  require("../assets/icon/Education.svg")
+  require("../assets/icon/Education.svg"),
 ).uri;
 const dailyIconUri = Asset.fromModule(require("../assets/icon/Daily.svg")).uri;
 const othersIconUri = Asset.fromModule(
-  require("../assets/icon/Others.svg")
+  require("../assets/icon/Others.svg"),
 ).uri;
 
 export const ICON_TILE_ITEMS: IconTileItem[] = [
@@ -80,5 +80,11 @@ export const ICON_TILE_ITEMS: IconTileItem[] = [
     label: "Others",
     uri: othersIconUri,
     bgColor: "rgb(240, 225, 169)",
+  },
+  {
+    value: 8,
+    label: "Exchange",
+    uri: othersIconUri,
+    bgColor: "rgb(239, 222, 216)",
   },
 ];

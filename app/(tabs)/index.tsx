@@ -19,11 +19,11 @@ export default function HomeTab() {
     const next: TransactionRecord[] = [];
 
     for (const month of months) {
-      if (next.length >= 3) break;
+      if (next.length >= 10) break;
       const list = await getTransactionsByMonth(month);
       for (const record of list) {
         next.push(record);
-        if (next.length >= 3) break;
+        if (next.length >= 10) break;
       }
     }
 

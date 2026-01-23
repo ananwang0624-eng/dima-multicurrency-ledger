@@ -66,17 +66,17 @@ function validateTransactionRecord(record: TransactionRecord): void {
   }
   if (!getCurrencyByCode(record.currency)) {
     throw new Error(
-      `Invalid transaction: unsupported currency code '${record.currency}'`
+      `Invalid transaction: unsupported currency code '${record.currency}'`,
     );
   }
 
   if (
     !Number.isInteger(record.category) ||
     record.category < 0 ||
-    record.category > 7
+    record.category > 8
   ) {
     throw new Error(
-      "Invalid transaction: category must be an integer between 0 and 7"
+      "Invalid transaction: category must be an integer between 0 and 8",
     );
   }
 
@@ -85,7 +85,7 @@ function validateTransactionRecord(record: TransactionRecord): void {
   }
   if (!isIso8601Rfc3339DateTime(record.date)) {
     throw new Error(
-      "Invalid transaction: date must be an ISO 8601 / RFC 3339 datetime string"
+      "Invalid transaction: date must be an ISO 8601 / RFC 3339 datetime string",
     );
   }
 
@@ -118,7 +118,7 @@ function createDefaultBalances(): BalancesByCurrency {
 }
 
 function normalizeBalancesForWrite(
-  balances: BalancesByCurrency | undefined
+  balances: BalancesByCurrency | undefined,
 ): BalancesByCurrency {
   const normalized = createDefaultBalances();
 
@@ -135,7 +135,7 @@ function normalizeBalancesForWrite(
 }
 
 function computeBalances(
-  transactionsByMonth: BookkeepingData
+  transactionsByMonth: BookkeepingData,
 ): BalancesByCurrency {
   const balances: BalancesByCurrency = createDefaultBalances();
 
@@ -221,7 +221,7 @@ function normalizeBookkeepingFile(raw: unknown): BookkeepingFile {
 
 function shouldPersistNormalized(
   raw: unknown,
-  normalized: BookkeepingFile
+  normalized: BookkeepingFile,
 ): boolean {
   if (!raw || typeof raw !== "object") return true;
   const record = raw as Record<string, unknown>;
@@ -245,101 +245,77 @@ const DEFAULT_FILE: BookkeepingFile = {
   balances: createDefaultBalances(),
 };
 
-const SEEDED_TEST_TRANSACTIONS: TransactionRecord[] = [
-  // 3 transactions on 2026-01-01
-  {
-    uuid: "seed-20260101-001",
-    amount: 28.5,
-    currency: "CNY",
-    category: 0,
-    date: "2026-01-01T02:15:00.000+01:00",
-    description: "Seed: Breakfast",
-    type: "expense",
-  },
-  {
-    uuid: "seed-20260101-002",
-    amount: 199.0,
-    currency: "CNY",
-    category: 2,
-    date: "2026-01-01T09:40:00.000+01:00",
-    description: "Seed: Shopping",
-    type: "expense",
-  },
-  {
-    uuid: "seed-20260101-003",
-    amount: 1200.0,
-    currency: "CNY",
-    category: 7,
-    date: "2026-01-01T12:00:00.000+01:00",
-    description: "Seed: Bonus",
-    type: "income",
-  },
+const SEEDED_CURRENCIES = ["CNY", "EUR"] as const;
+const SEEDED_DAYS = 30;
+const SEEDED_RECORDS_PER_DAY = 5;
 
-  // 7 transactions in 2025-12
-  {
-    uuid: "seed-202512-001",
-    amount: 15.9,
-    currency: "CNY",
-    category: 0,
-    date: "2025-12-03T08:30:00.000+01:00",
-    description: "Seed: Coffee",
-    type: "expense",
-  },
-  {
-    uuid: "seed-202512-002",
-    amount: 68.0,
-    currency: "CNY",
-    category: 6,
-    date: "2025-12-07T13:10:00.000+01:00",
-    description: "Seed: Daily",
-    type: "expense",
-  },
-  {
-    uuid: "seed-202512-003",
-    amount: 329.0,
-    currency: "CNY",
-    category: 3,
-    date: "2025-12-11T19:45:00.000+01:00",
-    description: "Seed: Gaming",
-    type: "expense",
-  },
-  {
-    uuid: "seed-202512-004",
-    amount: 45.0,
-    currency: "CNY",
-    category: 5,
-    date: "2025-12-15T10:05:00.000+01:00",
-    description: "Seed: Education",
-    type: "expense",
-  },
-  {
-    uuid: "seed-202512-005",
-    amount: 88.8,
-    currency: "CNY",
-    category: 4,
-    date: "2025-12-19T04:20:00.000+01:00",
-    description: "Seed: Health",
-    type: "expense",
-  },
-  {
-    uuid: "seed-202512-006",
-    amount: 12.0,
-    currency: "CNY",
-    category: 1,
-    date: "2025-12-24T16:00:00.000+01:00",
-    description: "Seed: Transparent",
-    type: "expense",
-  },
-  {
-    uuid: "seed-202512-007",
-    amount: 520.0,
-    currency: "CNY",
-    category: 7,
-    date: "2025-12-31T23:50:00.000+01:00",
-    description: "Seed: Others",
-    type: "expense",
-  },
-];
+function randomIntInclusive(min: number, max: number): number {
+  const lo = Math.ceil(min);
+  const hi = Math.floor(max);
+  return Math.floor(Math.random() * (hi - lo + 1)) + lo;
+}
+
+function randomPick<T>(items: readonly T[]): T {
+  return items[randomIntInclusive(0, items.length - 1)]!;
+}
+
+function roundTo2(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
+function formatSeedDayIdLocal(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}${m}${d}`;
+}
+
+function generateSeededTestTransactions(
+  now: Date = new Date(),
+): TransactionRecord[] {
+  const records: TransactionRecord[] = [];
+
+  // Use local-noon as the anchor to avoid UTC conversion shifting the day.
+  const anchor = new Date(now);
+  anchor.setHours(12, 0, 0, 0);
+
+  for (let dayOffset = 0; dayOffset < SEEDED_DAYS; dayOffset++) {
+    const day = new Date(anchor);
+    day.setDate(anchor.getDate() - dayOffset);
+
+    const dayId = formatSeedDayIdLocal(day);
+
+    for (let i = 1; i <= SEEDED_RECORDS_PER_DAY; i++) {
+      const type: TransactionRecord["type"] =
+        Math.random() < 0.2 ? "income" : "expense";
+      const currency = randomPick(SEEDED_CURRENCIES);
+      const category = randomIntInclusive(0, 7) as IconTilePickerValue;
+
+      const hour = randomIntInclusive(7, 22);
+      const minute = randomIntInclusive(0, 59);
+      const second = randomIntInclusive(0, 59);
+      const dateLocal = new Date(day);
+      dateLocal.setHours(hour, minute, second, 0);
+
+      const amount =
+        type === "income"
+          ? roundTo2(randomIntInclusive(50, 3000) + Math.random())
+          : roundTo2(randomIntInclusive(5, 800) + Math.random());
+
+      records.push({
+        uuid: `seed-${dayId}-${String(i).padStart(3, "0")}`,
+        amount,
+        currency,
+        category,
+        date: dateLocal.toISOString(),
+        description: `Seed: ${currency} ${type}`,
+        type,
+      });
+    }
+  }
+
+  return records;
+}
 
 /**
  * Clear all bookkeeping records.
@@ -350,28 +326,32 @@ export async function clearAllTransactions(): Promise<void> {
 }
 
 /**
- * Seed deterministic test transactions for manual testing.
- * - 3 records on 2026-01-01
- * - 7 records in 2025-12
- * Idempotent: re-seeding won't create duplicates (same UUIDs are replaced).
+ * Seed random test transactions for manual testing.
+ * - Range: last ~1 month (recent 30 days, including today)
+ * - Density: 5 records per day
+ * - Currencies: CNY / EUR only
+ * - Category: random 0-7
+ * Idempotent: existing seed UUIDs are removed before inserting.
  */
 export async function seedDeterministicTestTransactions(): Promise<void> {
   await initializeDataFile();
 
+  const seededTransactions = generateSeededTestTransactions();
+
   // Validate seed data so we fail fast if currencies/categories/dates change.
-  for (const record of SEEDED_TEST_TRANSACTIONS) {
+  for (const record of seededTransactions) {
     validateTransactionRecord(record);
   }
 
   const file = await readBookkeepingFile();
   const data = file.transactionsByMonth;
-  const seededUuids = new Set(SEEDED_TEST_TRANSACTIONS.map((t) => t.uuid));
 
+  // Remove any previous seed entries to keep seeding repeatable.
   for (const key of Object.keys(data)) {
-    data[key] = (data[key] || []).filter((t) => !seededUuids.has(t.uuid));
+    data[key] = (data[key] || []).filter((t) => !t.uuid.startsWith("seed-"));
   }
 
-  for (const record of SEEDED_TEST_TRANSACTIONS) {
+  for (const record of seededTransactions) {
     const key = getYearMonthKey(record.date);
     if (!data[key]) data[key] = [];
     data[key].push(record);
