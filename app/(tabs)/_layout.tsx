@@ -12,8 +12,11 @@ const bookkeepingIconUri = Asset.fromModule(
 const statisticsIconUri = Asset.fromModule(
   require("../../assets/icon/Statistics.svg")
 ).uri;
+const exchangeIconUri = Asset.fromModule(
+  require("../../assets/icon/货币单位.svg"),
+).uri;
 const settingsIconUri = Asset.fromModule(
-  require("../../assets/icon/Settings.svg")
+  require("../../assets/icon/Settings.svg"),
 ).uri;
 
 export default function TabLayout() {
@@ -70,6 +73,20 @@ export default function TabLayout() {
           tabBarIcon: ({ size, color }) => (
             <SvgUri
               uri={statisticsIconUri}
+              width={size}
+              height={size}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="exchange"
+        options={{
+          title: "Exchange",
+          tabBarIcon: ({ size, color }) => (
+            <SvgUri
+              uri={exchangeIconUri}
               width={size}
               height={size}
               color={color}
