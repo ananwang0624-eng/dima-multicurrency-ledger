@@ -73,7 +73,7 @@ export default function HomeTab() {
               <TransactionRecordItem key={record.uuid} record={record} />
             ))
           ) : (
-            <Text style={styles.emptyText}>暂无记录</Text>
+            <Text style={styles.emptyText}>No records</Text>
           )}
         </View>
       </ScrollView>

@@ -106,8 +106,8 @@ export default function SettingsTab() {
       <Text style={styles.title}>Settings</Text>
 
       <SubmenuNavButton
-        title="货币单位"
-        subtitle="设置记账货币单位"
+        title="Currency Units"
+        subtitle="Set bookkeeping currency units"
         href="/set-cur-type"
         iconName="settings-outline"
       />
@@ -115,12 +115,12 @@ export default function SettingsTab() {
       <View style={{ height: 16 }} />
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>偏好设置</Text>
+        <Text style={styles.sectionTitle}>Preferences</Text>
         <TouchableOpacity
           style={styles.rowButton}
           onPress={() => setCurrencyPickerOpen(true)}
         >
-          <Text style={styles.rowLabel}>默认币种</Text>
+          <Text style={styles.rowLabel}>Default Currency</Text>
           <Text style={styles.rowValue}>
             {currencyMeta
               ? `${currencyMeta.code} (${currencyMeta.symbol})`
@@ -136,7 +136,7 @@ export default function SettingsTab() {
       </Link>
 
       <TouchableOpacity style={styles.dangerButton} onPress={handleClearAll}>
-        <Text style={styles.dangerButtonText}>清空所有记账记录</Text>
+        <Text style={styles.dangerButtonText}>Clear All Records</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -144,12 +144,12 @@ export default function SettingsTab() {
         onPress={handleSeedTestData}
       >
         <Text style={styles.secondaryButtonText}>
-          生成固定测试记账数据（10条）
+          Generate Fixed Test Data (10 records)
         </Text>
       </TouchableOpacity>
 
       <View style={styles.latestSection}>
-        <Text style={styles.latestTitle}>最近一条记账记录</Text>
+        <Text style={styles.latestTitle}>Latest Record</Text>
         {latest ? (
           <View>
             <Text style={styles.latestLine} numberOfLines={2}>
@@ -177,7 +177,7 @@ export default function SettingsTab() {
             ) : null}
           </View>
         ) : (
-          <Text style={styles.latestEmpty}>暂无记录</Text>
+          <Text style={styles.latestEmpty}>No records</Text>
         )}
       </View>
 
@@ -192,7 +192,7 @@ export default function SettingsTab() {
           onPress={() => setCurrencyPickerOpen(false)}
         >
           <Pressable style={styles.modalCard} onPress={() => undefined}>
-            <Text style={styles.modalTitle}>选择默认币种</Text>
+            <Text style={styles.modalTitle}>Select Default Currency</Text>
             <FlatList
               data={CURRENCIES}
               keyExtractor={(item) => item.code}
