@@ -432,6 +432,26 @@ export async function getTransactionsByMonth(
 }
 
 /**
+ * Get all transactions across all months.
+ * @returns Array of all transactions sorted by date (newest first)
+ */
+export async function getAllTransactions(): Promise<TransactionRecord[]> {
+  const file = await readBookkeepingFile();
+  const allTransactions: TransactionRecord[] = [];
+  
+  for (const records of Object.values(file.transactionsByMonth)) {
+    allTransactions.push(...records);
+  }
+  
+  // Sort by date in descending order (newest first)
+  allTransactions.sort((a, b) => {
+    return new Date(b.date).getTime() - new Date(a.date).getTime();
+  });
+  
+  return allTransactions;
+}
+
+/**
  * Get all available year-month keys.
  * @returns Array of year-month keys sorted in descending order
  */

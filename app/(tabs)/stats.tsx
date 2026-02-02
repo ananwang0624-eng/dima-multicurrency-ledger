@@ -1,9 +1,134 @@
 import DateAmountLineChart from "@/components/DateAmountLineChart";
-import { useMemo } from "react";
+import ExpenseCategoryPieChart from "@/components/ExpenseCategoryPieChart";
+import { MonthYearPicker } from "@/components/MonthYearPicker";
+import TransactionTypeSelector from "@/components/TransactionTypeSelector";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  getTransactionsByMonth,
+  subscribeDataChanges,
+  type TransactionRecord,
+} from "@/utils/dataManager";
+import { getSettings, subscribeSettings } from "@/utils/settingsManager";
+import {
+  ensureExchangeRates,
+  type ExchangeRateData,
+} from "@/utils/exchangeRateManager";
+import { CURRENCIES } from "@/data/currencies";
+
+type TransactionType = "income" | "expense";
 
 export default function StatsTab() {
+  const now = useMemo(() => new Date(), []);
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
+  const [transactionType, setTransactionType] =
+    useState<TransactionType>("expense");
+  const [transactions, setTransactions] = useState<TransactionRecord[]>([]);
+  const [defaultCurrency, setDefaultCurrency] = useState("USD");
+  const [exchangeRates, setExchangeRates] = useState<
+    Map<string, ExchangeRateData>
+  >(new Map());
 
+  const refreshTransactions = useCallback(async () => {
+    const yearMonth = `${selectedYear}-${String(selectedMonth).padStart(2, "0")}`;
+    const list = await getTransactionsByMonth(yearMonth);
+    setTransactions(list);
+  }, [selectedYear, selectedMonth]);
+
+  useEffect(() => {
+    refreshTransactions();
+  }, [refreshTransactions]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeDataChanges(() => {
+      refreshTransactions();
+    });
+
+    return unsubscribe;
+  }, [refreshTransactions]);
+
+  // 加载设置和汇率
+  useEffect(() => {
+    const loadSettingsAndRates = async () => {
+      const settings = await getSettings();
+      setDefaultCurrency(settings.defaultCurrencyCode);
+
+      // 获取所有需要的汇率
+      const ratesMap = new Map<string, ExchangeRateData>();
+      for (const currency of CURRENCIES) {
+        if (currency.code !== settings.defaultCurrencyCode) {
+          try {
+            const rateData = await ensureExchangeRates(
+              currency.code,
+              settings.defaultCurrencyCode,
+            );
+            ratesMap.set(
+              `${currency.code}-${settings.defaultCurrencyCode}`,
+              rateData,
+            );
+          } catch (error) {
+            console.error(
+              `Failed to load exchange rate for ${currency.code}:`,
+              error,
+            );
+          }
+        }
+      }
+      setExchangeRates(ratesMap);
+    };
+
+    loadSettingsAndRates();
+
+    const unsubscribeSettings = subscribeSettings((settings) => {
+      setDefaultCurrency(settings.defaultCurrencyCode);
+      loadSettingsAndRates();
+    });
+
+    return unsubscribeSettings;
+  }, []);
+
+  return (
+    <ScrollView style={styles.container}>
+      <View style={styles.content}>
+        {/* 选择器行 */}
+        <View style={styles.selectorsRow}>
+          <View style={styles.monthPickerContainer}>
+            <MonthYearPicker
+              year={selectedYear}
+              month={selectedMonth}
+              recordCount={transactions.length}
+              onYearChange={setSelectedYear}
+              onMonthChange={setSelectedMonth}
+            />
+          </View>
+          <View style={styles.typeSelectorContainer}>
+            <TransactionTypeSelector
+              selectedType={transactionType}
+              onTypeChange={setTransactionType}
+            />
+          </View>
+        </View>
+
+        {/* 分类饼图 */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>
+            分类{transactionType === "expense" ? "支出" : "收入"}分布
+          </Text>
+          <Text style={styles.sectionHint}>
+            显示不同分类的{transactionType === "expense" ? "支出" : "收入"}
+            占比（已转换为 {defaultCurrency}）
+          </Text>
+          <ExpenseCategoryPieChart
+            transactions={transactions}
+            defaultCurrency={defaultCurrency}
+            exchangeRates={exchangeRates}
+            transactionType={transactionType}
+          />
+        </View>
+      </View>
+    </ScrollView>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -25,16 +150,40 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "rgb(133, 115, 110)",
   },
+  selectorsRow: {
+    marginTop: 16,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+  },
+  monthPickerContainer: {
+    flex: 1,
+  },
+  typeSelectorContainer: {
+    paddingTop: 0,
+  },
+  section: {
+    marginTop: 16,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
   sectionTitle: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "800",
     color: "rgb(128, 75, 56)",
   },
   sectionHint: {
     marginTop: 6,
     fontSize: 12,
-    fontWeight: "700",
+    fontWeight: "600",
     color: "rgb(133, 115, 110)",
+    marginBottom: 12,
   },
   infoText: {
     fontSize: 14,

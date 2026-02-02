@@ -1,3 +1,128 @@
+/**
+ * 判断当前汇率在过去30天历史区间的五档位置（1最低-5最高）
+ * 返回 1~5 或 'insufficient-data'
+ */
+export function getMonthlyRateLevel(
+  data: ExchangeRateData,
+): number | "insufficient-data" {
+  const dates = Object.keys(data.rates).sort();
+  if (dates.length < 2) return "insufficient-data";
+  const latest = dates[dates.length - 1];
+  const latestDate = new Date(latest);
+  // 取过去30天的开始日期
+  const monthAgo = new Date(latestDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const monthAgoStr = monthAgo.toISOString().slice(0, 10);
+  // 过滤过去30天的数据
+  const monthRates = dates
+    .filter((d) => d >= monthAgoStr && d <= latest)
+    .map((d) => data.rates[d]);
+  if (monthRates.length < 2) return "insufficient-data";
+  const sorted = [...monthRates].sort((a, b) => a - b);
+  const latestRate = data.rates[latest];
+  const idx = sorted.findIndex((r) => r >= latestRate);
+  const pos = idx === -1 ? sorted.length : idx + 1;
+  const level = Math.ceil((pos / sorted.length) * 5);
+  return Math.min(Math.max(level, 1), 5);
+}
+
+/**
+ * 判断当前汇率在过去365天历史区间的五档位置（1最低-5最高）
+ * 返回 1~5 或 'insufficient-data'
+ */
+export function getYearlyRateLevel(
+  data: ExchangeRateData,
+): number | "insufficient-data" {
+  const dates = Object.keys(data.rates).sort();
+  if (dates.length < 2) return "insufficient-data";
+  const latest = dates[dates.length - 1];
+  const latestDate = new Date(latest);
+  // 取过去365天的开始日期
+  const yearAgo = new Date(latestDate.getTime() - 365 * 24 * 60 * 60 * 1000);
+  const yearAgoStr = yearAgo.toISOString().slice(0, 10);
+  // 过滤过去365天的数据
+  const yearRates = dates
+    .filter((d) => d >= yearAgoStr && d <= latest)
+    .map((d) => data.rates[d]);
+  if (yearRates.length < 2) return "insufficient-data";
+  const sorted = [...yearRates].sort((a, b) => a - b);
+  const latestRate = data.rates[latest];
+  const idx = sorted.findIndex((r) => r >= latestRate);
+  const pos = idx === -1 ? sorted.length : idx + 1;
+  const level = Math.ceil((pos / sorted.length) * 5);
+  return Math.min(Math.max(level, 1), 5);
+}
+/**
+ * 判断以天为单位，最新汇率是升高还是降低
+ * 返回 'up' | 'down' | 'flat' | 'insufficient-data'
+ */
+export function getDailyTrend(
+  data: ExchangeRateData,
+): "up" | "down" | "flat" | "insufficient-data" {
+  const dates = Object.keys(data.rates).sort();
+  if (dates.length < 2) return "insufficient-data";
+  const latest = dates[dates.length - 1];
+  const prev = dates[dates.length - 2];
+  const latestRate = data.rates[latest];
+  const prevRate = data.rates[prev];
+  if (latestRate > prevRate) return "up";
+  if (latestRate < prevRate) return "down";
+  return "flat";
+}
+
+/**
+ * 判断以周为单位，最新汇率是升高还是降低
+ * 返回 'up' | 'down' | 'flat' | 'insufficient-data'
+ */
+export function getWeeklyTrend(
+  data: ExchangeRateData,
+): "up" | "down" | "flat" | "insufficient-data" {
+  const dates = Object.keys(data.rates).sort();
+  if (dates.length < 8) return "insufficient-data";
+  const latest = dates[dates.length - 1];
+  // 找到一周前的日期
+  const latestDate = new Date(latest);
+  let weekAgoDateStr = "";
+  for (let i = dates.length - 2; i >= 0; i--) {
+    const d = new Date(dates[i]);
+    if (latestDate.getTime() - d.getTime() >= 6 * 24 * 60 * 60 * 1000) {
+      weekAgoDateStr = dates[i];
+      break;
+    }
+  }
+  if (!weekAgoDateStr) return "insufficient-data";
+  const latestRate = data.rates[latest];
+  const weekAgoRate = data.rates[weekAgoDateStr];
+  if (latestRate > weekAgoRate) return "up";
+  if (latestRate < weekAgoRate) return "down";
+  return "flat";
+}
+
+/**
+ * 判断以月为单位，最新汇率是升高还是降低
+ * 返回 'up' | 'down' | 'flat' | 'insufficient-data'
+ */
+export function getMonthlyTrend(
+  data: ExchangeRateData,
+): "up" | "down" | "flat" | "insufficient-data" {
+  const dates = Object.keys(data.rates).sort();
+  if (dates.length < 2) return "insufficient-data";
+  const latest = dates[dates.length - 1];
+  const latestDate = new Date(latest);
+  let monthAgoDateStr = "";
+  for (let i = 0; i < dates.length - 1; i++) {
+    const d = new Date(dates[i]);
+    if (latestDate.getTime() - d.getTime() >= 30 * 24 * 60 * 60 * 1000) {
+      monthAgoDateStr = dates[i];
+      break;
+    }
+  }
+  if (!monthAgoDateStr) return "insufficient-data";
+  const latestRate = data.rates[latest];
+  const monthAgoRate = data.rates[monthAgoDateStr];
+  if (latestRate > monthAgoRate) return "up";
+  if (latestRate < monthAgoRate) return "down";
+  return "flat";
+}
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // 使用 Frankfurter API（免费、无需 API key、支持历史数据）
