@@ -94,7 +94,7 @@ export default function SetCurTypeScreen() {
     const normalized = balanceInput.replace(/,/g, "").trim();
     const value = Number.parseFloat(normalized);
     if (!Number.isFinite(value)) {
-      Alert.alert("金额无效", "请输入正确的数字金额");
+      Alert.alert("Invalid Amount", "Please enter a valid numeric amount");
       return;
     }
 
@@ -103,22 +103,25 @@ export default function SetCurTypeScreen() {
       setBalanceModalOpen(false);
     } catch (e) {
       console.error("Failed to set balance:", e);
-      Alert.alert("保存失败", "无法保存余额，请稍后再试");
+      Alert.alert(
+        "Save Failed",
+        "Unable to save balance, please try again later",
+      );
     }
   }, [balanceCurrencyCode, balanceInput]);
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>记账币种</Text>
+      <Text style={styles.title}>Bookkeeping Currencies</Text>
 
       <View style={styles.section}>
         <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>已添加币种</Text>
+          <Text style={styles.sectionTitle}>Added Currencies</Text>
           <TouchableOpacity
             style={styles.addButton}
             onPress={() => setPickerOpen(true)}
           >
-            <Text style={styles.addButtonText}>添加</Text>
+            <Text style={styles.addButtonText}>Add</Text>
           </TouchableOpacity>
         </View>
 
@@ -142,7 +145,7 @@ export default function SetCurTypeScreen() {
                   <TouchableOpacity
                     onPress={() => {
                       openBalanceModal(item.code).catch((e) =>
-                        console.error("Failed to open balance modal:", e)
+                        console.error("Failed to open balance modal:", e),
                       );
                     }}
                     style={styles.setBalanceButton}
@@ -171,7 +174,7 @@ export default function SetCurTypeScreen() {
                         !canDelete ? styles.deleteButtonTextDisabled : null,
                       ]}
                     >
-                      删除
+                      Delete
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -181,7 +184,7 @@ export default function SetCurTypeScreen() {
         />
 
         {enabledCurrencies.length <= 1 ? (
-          <Text style={styles.hint}>至少需要保留 1 个币种</Text>
+          <Text style={styles.hint}>At least 1 currency must be kept</Text>
         ) : null}
       </View>
 
@@ -196,7 +199,7 @@ export default function SetCurTypeScreen() {
           onPress={() => setPickerOpen(false)}
         >
           <Pressable style={styles.modalCard} onPress={() => undefined}>
-            <Text style={styles.modalTitle}>添加记账币种</Text>
+            <Text style={styles.modalTitle}>Add Bookkeeping Currency</Text>
             <FlatList
               data={addableCurrencies}
               keyExtractor={(item) => item.code}
@@ -226,7 +229,7 @@ export default function SetCurTypeScreen() {
                 );
               }}
               ListEmptyComponent={
-                <Text style={styles.empty}>已添加全部可选币种</Text>
+                <Text style={styles.empty}>All available currencies added</Text>
               }
             />
           </Pressable>
@@ -247,7 +250,7 @@ export default function SetCurTypeScreen() {
             <Text style={styles.modalTitle}>set balance</Text>
             <View style={styles.balanceModalBody}>
               <Text style={styles.balanceHint}>
-                {balanceCurrencyCode ?? ""} 当前余额
+                Current Balance ({balanceCurrencyCode ?? ""})
               </Text>
               <TextInput
                 value={balanceInput}
@@ -263,17 +266,17 @@ export default function SetCurTypeScreen() {
                   style={styles.balanceCancelButton}
                   onPress={() => setBalanceModalOpen(false)}
                 >
-                  <Text style={styles.balanceCancelText}>取消</Text>
+                  <Text style={styles.balanceCancelText}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.balanceSaveButton}
                   onPress={() => {
                     saveBalance().catch((e) =>
-                      console.error("Failed to save balance:", e)
+                      console.error("Failed to save balance:", e),
                     );
                   }}
                 >
-                  <Text style={styles.balanceSaveText}>保存</Text>
+                  <Text style={styles.balanceSaveText}>Save</Text>
                 </TouchableOpacity>
               </View>
             </View>

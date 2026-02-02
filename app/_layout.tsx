@@ -27,7 +27,7 @@ export default function RootLayout() {
           name="set-cur-type"
           options={{
             headerShown: true,
-            title: "记账币种",
+            title: "Bookkeeping Currencies",
             headerStyle: {
               backgroundColor: "rgb(128, 75, 56)",
             },

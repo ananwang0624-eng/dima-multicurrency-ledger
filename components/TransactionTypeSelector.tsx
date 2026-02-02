@@ -27,8 +27,8 @@ type TransactionOption = {
 };
 
 const TRANSACTION_OPTIONS: TransactionOption[] = [
-  { value: "expense", label: "支出" },
-  { value: "income", label: "收入" },
+  { value: "expense", label: "Expense" },
+  { value: "income", label: "Income" },
 ];
 
 function WheelPicker({
@@ -153,7 +153,7 @@ export default function TransactionTypeSelector({
     const option = TRANSACTION_OPTIONS.find(
       (opt) => opt.value === selectedType,
     );
-    return option?.label || "支出";
+    return option?.label || "Expense";
   }, [selectedType]);
 
   return (
@@ -178,9 +178,9 @@ export default function TransactionTypeSelector({
           <Pressable style={styles.modalBackdrop} onPress={close} />
           <View style={styles.modalPanel}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>选择类型</Text>
+              <Text style={styles.modalTitle}>Select Type</Text>
               <Pressable onPress={close} style={styles.doneButton}>
-                <Text style={styles.doneButtonText}>完成</Text>
+                <Text style={styles.doneButtonText}>Done</Text>
               </Pressable>
             </View>
             <View style={styles.modalDivider} />

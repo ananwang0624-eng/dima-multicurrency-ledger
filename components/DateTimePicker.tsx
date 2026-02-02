@@ -214,15 +214,15 @@ export function DateTimePicker({
   const modalTitle = useMemo(() => {
     switch (activeField) {
       case "year":
-        return "选择年份";
+        return "Select Year";
       case "month":
-        return "选择月份";
+        return "Select Month";
       case "day":
-        return "选择日期";
+        return "Select Day";
       case "hour":
-        return "选择小时";
+        return "Select Hour";
       case "minute":
-        return "选择分钟";
+        return "Select Minute";
       default:
         return "";
     }
@@ -354,7 +354,7 @@ export function DateTimePicker({
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{modalTitle}</Text>
               <Pressable onPress={close} style={styles.doneButton}>
-                <Text style={styles.doneButtonText}>完成</Text>
+                <Text style={styles.doneButtonText}>Done</Text>
               </Pressable>
             </View>
             <View style={styles.modalDivider} />

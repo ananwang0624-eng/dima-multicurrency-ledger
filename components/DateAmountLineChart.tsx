@@ -67,17 +67,17 @@ export default function DateAmountLineChart({
       <View style={styles.legendRow}>
         <View style={styles.legendItem}>
           <View style={[styles.legendDot, { backgroundColor: incomeColor }]} />
-          <Text style={styles.legendText}>收入</Text>
+          <Text style={styles.legendText}>Income</Text>
         </View>
         <View style={styles.legendItem}>
           <View style={[styles.legendDot, { backgroundColor: expenseColor }]} />
-          <Text style={styles.legendText}>支出</Text>
+          <Text style={styles.legendText}>Expense</Text>
         </View>
       </View>
 
       {isEmpty ? (
         <View style={[styles.emptyState, { height }]}>
-          <Text style={styles.emptyText}>暂无数据</Text>
+          <Text style={styles.emptyText}>No data</Text>
         </View>
       ) : (
         <LineChart

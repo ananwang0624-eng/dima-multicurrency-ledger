@@ -29,12 +29,12 @@ export default function ExchangeTab() {
   const [isLoadingRates, setIsLoadingRates] = useState(true);
   const [ratesError, setRatesError] = useState<string | null>(null);
 
-  // 趋势时间范围：日/周/月
+  // Trend time range: day/week/month
   const [trendPeriod, setTrendPeriod] = useState<
     "daily" | "weekly" | "monthly"
   >("daily");
 
-  // 档次时间范围：月/年
+  // Level time range: month/year
   const [levelPeriod, setLevelPeriod] = useState<"monthly" | "yearly">(
     "monthly",
   );
@@ -61,7 +61,7 @@ export default function ExchangeTab() {
       setExchangeRateData(dataList);
     } catch (error) {
       console.error("Failed to load exchange rates:", error);
-      setRatesError(error instanceof Error ? error.message : "未知错误");
+      setRatesError(error instanceof Error ? error.message : "Unknown error");
     } finally {
       setIsLoadingRates(false);
     }
@@ -71,7 +71,7 @@ export default function ExchangeTab() {
     loadExchangeRates();
   }, [loadExchangeRates]);
 
-  // 订阅设置变化
+  // Subscribe to settings changes
   useEffect(() => {
     const unsubscribe = subscribeSettings(() => {
       loadExchangeRates();
@@ -79,7 +79,7 @@ export default function ExchangeTab() {
     return unsubscribe;
   }, [loadExchangeRates]);
 
-  // 当页面获得焦点时刷新数据
+  // Refresh data when page gains focus
   useFocusEffect(
     useCallback(() => {
       loadExchangeRates();
@@ -93,17 +93,17 @@ export default function ExchangeTab() {
 
       <View style={{ height: 16 }} />
 
-      {/* 趋势和档次时间范围选择器 */}
+      {/* Trend and level time range selector */}
       <View style={{ flexDirection: "row", gap: 12 }}>
         <View style={{ flex: 1 }}>
           <OptionPicker
-            label="趋势范围"
+            label="Trend Range"
             value={trendPeriod}
             options={["daily", "weekly", "monthly"] as const}
             formatOption={(v) => {
-              if (v === "daily") return "日";
-              if (v === "weekly") return "周";
-              return "月";
+              if (v === "daily") return "Day";
+              if (v === "weekly") return "Week";
+              return "Month";
             }}
             onChange={setTrendPeriod}
           />
@@ -111,10 +111,10 @@ export default function ExchangeTab() {
 
         <View style={{ flex: 1 }}>
           <OptionPicker
-            label="档次范围"
+            label="Level Range"
             value={levelPeriod}
             options={["monthly", "yearly"] as const}
-            formatOption={(v) => (v === "monthly" ? "月" : "年")}
+            formatOption={(v) => (v === "monthly" ? "Month" : "Year")}
             onChange={setLevelPeriod}
           />
         </View>
@@ -122,26 +122,26 @@ export default function ExchangeTab() {
 
       <View style={{ height: 16 }} />
 
-      {/* 汇率卡片列表 */}
+      {/* Exchange rate card list */}
       {isLoadingRates ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="small" color="rgb(128, 75, 56)" />
-          <Text style={styles.loadingText}>加载中...</Text>
+          <Text style={styles.loadingText}>Loading...</Text>
         </View>
       ) : ratesError ? (
-        <Text style={styles.errorText}>加载失败: {ratesError}</Text>
+        <Text style={styles.errorText}>Failed to load: {ratesError}</Text>
       ) : exchangeRateData.length > 0 ? (
         <View style={{ gap: 12 }}>
           {exchangeRateData.map((data) => {
-            // 跳过相同货币的汇率
+            // Skip exchange rate for same currency
             if (data.baseCurrency === data.targetCurrency) return null;
 
-            // 获取最新汇率
+            // Get latest exchange rate
             const dates = Object.keys(data.rates).sort();
             const latestDate = dates[dates.length - 1];
             const currentRate = latestDate ? data.rates[latestDate] : 0;
 
-            // 根据选择的时间范围计算趋势
+            // Calculate trend based on selected time range
             let trend: "up" | "down" | "flat" | "insufficient-data";
             if (trendPeriod === "daily") {
               trend = getDailyTrend(data);
@@ -151,13 +151,13 @@ export default function ExchangeTab() {
               trend = getMonthlyTrend(data);
             }
 
-            // 根据选择的时间范围计算档次
+            // Calculate level based on selected time range
             const level =
               levelPeriod === "monthly"
                 ? getMonthlyRateLevel(data)
                 : getYearlyRateLevel(data);
 
-            // 调试信息
+            // Debug information
             if (level === "insufficient-data") {
               console.log(
                 `${data.baseCurrency}/${data.targetCurrency} - Level: insufficient-data`,
@@ -180,7 +180,7 @@ export default function ExchangeTab() {
           })}
         </View>
       ) : (
-        <Text style={styles.emptyText}>暂无汇率数据</Text>
+        <Text style={styles.emptyText}>No exchange rate data</Text>
       )}
     </ScrollView>
   );

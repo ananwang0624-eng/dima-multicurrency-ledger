@@ -161,7 +161,7 @@ function LedgerTypeSegmented({
             value === 0 ? styles.segmentTextActive : styles.segmentTextInactive,
           ]}
         >
-          支出
+          Expense
         </Text>
       </Pressable>
       <Pressable style={styles.segmentButton} onPress={() => goTo(1)}>
@@ -171,7 +171,7 @@ function LedgerTypeSegmented({
             value === 1 ? styles.segmentTextActive : styles.segmentTextInactive,
           ]}
         >
-          收入
+          Income
         </Text>
       </Pressable>
       <Pressable style={styles.segmentButton} onPress={() => goTo(2)}>
@@ -181,7 +181,7 @@ function LedgerTypeSegmented({
             value === 2 ? styles.segmentTextActive : styles.segmentTextInactive,
           ]}
         >
-          换汇
+          Exchange
         </Text>
       </Pressable>
     </View>
@@ -301,11 +301,11 @@ export default function LedgerTab() {
     if (selected === 2) {
       // 换汇模式
       if (!Number.isFinite(amountNumber) || amountNumber <= 0) {
-        Alert.alert("金额无效", "请输入有效的第一个金额。");
+        Alert.alert("Invalid Amount", "Please enter a valid first amount.");
         return;
       }
       if (!Number.isFinite(amountNumber2) || amountNumber2 <= 0) {
-        Alert.alert("金额无效", "请输入有效的第二个金额。");
+        Alert.alert("Invalid Amount", "Please enter a valid second amount.");
         return;
       }
 
@@ -344,17 +344,17 @@ export default function LedgerTab() {
         setAmount("");
         setAmount2("");
         setDescription("");
-        Alert.alert("已提交", "换汇记录已保存。");
+        Alert.alert("Submitted", "Exchange record saved.");
       } catch (e) {
-        const message = e instanceof Error ? e.message : "提交失败";
-        Alert.alert("提交失败", message);
+        const message = e instanceof Error ? e.message : "Submission failed";
+        Alert.alert("Submission Failed", message);
       } finally {
         setSubmitting(false);
       }
     } else {
       // 支出/收入模式
       if (!Number.isFinite(amountNumber) || amountNumber <= 0) {
-        Alert.alert("金额无效", "请输入一个大于 0 的金额。");
+        Alert.alert("Invalid Amount", "Please enter an amount greater than 0.");
         return;
       }
 
@@ -376,10 +376,10 @@ export default function LedgerTab() {
         await addTransaction(record);
         setAmount("");
         setDescription("");
-        Alert.alert("已提交", "记录已保存。");
+        Alert.alert("Submitted", "Record saved.");
       } catch (e) {
-        const message = e instanceof Error ? e.message : "提交失败";
-        Alert.alert("提交失败", message);
+        const message = e instanceof Error ? e.message : "Submission failed";
+        Alert.alert("Submission Failed", message);
       } finally {
         setSubmitting(false);
       }
@@ -548,7 +548,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   segmentText: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: "700",
   },
   segmentTextActive: {

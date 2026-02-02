@@ -169,7 +169,7 @@ export function MonthYearPicker({
   const close = useCallback(() => setActiveField(null), []);
 
   const modalTitle = useMemo(() => {
-    return activeField === "year" ? "选择年份" : "选择月份";
+    return activeField === "year" ? "Select Year" : "Select Month";
   }, [activeField]);
 
   const wheelConfig = useMemo(() => {
@@ -193,7 +193,7 @@ export function MonthYearPicker({
   return (
     <View style={[styles.container, style]}>
       <View style={styles.row}>
-        <Text style={styles.label}>记录</Text>
+        <Text style={styles.label}>Records</Text>
 
         <View style={styles.pickerRow}>
           <Pressable
@@ -206,7 +206,7 @@ export function MonthYearPicker({
             <Text style={styles.pickerText}>{String(year)}</Text>
           </Pressable>
 
-          <Text style={styles.separator}>年</Text>
+          <Text style={styles.separator}>-</Text>
 
           <Pressable
             style={({ pressed }) => [
@@ -218,10 +218,10 @@ export function MonthYearPicker({
             <Text style={styles.pickerText}>{pad2(month)}</Text>
           </Pressable>
 
-          <Text style={styles.separator}>月</Text>
+          <Text style={styles.separator}></Text>
         </View>
 
-        <Text style={styles.count}>({recordCount}条)</Text>
+        <Text style={styles.count}>({recordCount} records)</Text>
       </View>
 
       <Modal
@@ -236,7 +236,7 @@ export function MonthYearPicker({
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{modalTitle}</Text>
               <Pressable onPress={close} style={styles.doneButton}>
-                <Text style={styles.doneButtonText}>完成</Text>
+                <Text style={styles.doneButtonText}>Done</Text>
               </Pressable>
             </View>
             <View style={styles.modalDivider} />

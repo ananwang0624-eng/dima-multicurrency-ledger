@@ -106,7 +106,7 @@ export default function ExpenseCategoryPieChart({
     return (
       <View style={styles.emptyContainer}>
         <Text style={styles.emptyText}>
-          暂无{transactionType === "expense" ? "支出" : "收入"}数据
+          No {transactionType === "expense" ? "expense" : "income"} data
         </Text>
       </View>
     );
@@ -128,7 +128,7 @@ export default function ExpenseCategoryPieChart({
       {/* 总额 */}
       <View style={styles.totalContainer}>
         <Text style={styles.totalLabel}>
-          {transactionType === "expense" ? "总支出" : "总收入"}
+          {transactionType === "expense" ? "Total Expense" : "Total Income"}
         </Text>
         <Text style={styles.totalValue}>
           {totalExpense.toFixed(2)} {defaultCurrency}

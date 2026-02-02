@@ -185,9 +185,9 @@ export function OptionPicker<T extends string>({
           <Pressable style={styles.modalBackdrop} onPress={close} />
           <View style={styles.modalPanel}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>选择{label}</Text>
+              <Text style={styles.modalTitle}>Select {label}</Text>
               <Pressable onPress={close} style={styles.doneButton}>
-                <Text style={styles.doneButtonText}>完成</Text>
+                <Text style={styles.doneButtonText}>Done</Text>
               </Pressable>
             </View>
             <View style={styles.modalDivider} />

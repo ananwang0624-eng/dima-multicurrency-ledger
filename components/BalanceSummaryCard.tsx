@@ -124,7 +124,7 @@ export default function BalanceSummaryCard() {
 
   return (
     <View style={styles.card}>
-      <Text style={styles.title}>总余额</Text>
+      <Text style={styles.title}>Total Balance</Text>
       <View style={{ height: 10 }} />
       {rows.map((row, index) => (
         <View key={row.code}>

@@ -3,8 +3,8 @@ import { StyleSheet, Text, View } from "react-native";
 export default function SettingsSubmenuExampleScreen() {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>二级菜单示例</Text>
-      <Text style={styles.subtitle}>这里是一个用于演示跳转的页面。</Text>
+      <Text style={styles.title}>Submenu Example</Text>
+      <Text style={styles.subtitle}>This is a demo page for navigation.</Text>
     </View>
   );
 }

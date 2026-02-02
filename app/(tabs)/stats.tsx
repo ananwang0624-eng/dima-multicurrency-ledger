@@ -113,11 +113,12 @@ export default function StatsTab() {
         {/* 分类饼图 */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
-            分类{transactionType === "expense" ? "支出" : "收入"}分布
+            {transactionType === "expense" ? "Expense" : "Income"} Distribution
+            by Category
           </Text>
           <Text style={styles.sectionHint}>
-            显示不同分类的{transactionType === "expense" ? "支出" : "收入"}
-            占比（已转换为 {defaultCurrency}）
+            Shows {transactionType === "expense" ? "expense" : "income"}{" "}
+            proportion by category (converted to {defaultCurrency})
           </Text>
           <ExpenseCategoryPieChart
             transactions={transactions}
