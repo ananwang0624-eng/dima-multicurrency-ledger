@@ -484,7 +484,7 @@ export default function LedgerTab() {
         disabled={!canSubmit}
       >
         <Text style={styles.submitButtonText}>
-          {submitting ? "提交中..." : "提交记录"}
+          {submitting ? "Submitting..." : "Submit Record"}
         </Text>
       </Pressable>
 
