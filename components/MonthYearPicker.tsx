@@ -221,7 +221,7 @@ export function MonthYearPicker({
           <Text style={styles.separator}></Text>
         </View>
 
-        <Text style={styles.count}>({recordCount} records)</Text>
+        {/* <Text style={styles.count}>({recordCount} records)</Text> */}
       </View>
 
       <Modal
