@@ -103,12 +103,13 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "700",
     color: DARK_GRAY,
-    minWidth: 80,
+    minWidth: 60,
   },
   trendContainer: {
     width: 40,
     alignItems: "center",
     justifyContent: "center",
+    marginRight: 8,
   },
   trendUp: {
     fontSize: 28,
