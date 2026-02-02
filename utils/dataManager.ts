@@ -246,7 +246,7 @@ const DEFAULT_FILE: BookkeepingFile = {
 };
 
 const SEEDED_CURRENCIES = ["CNY", "EUR"] as const;
-const SEEDED_DAYS = 30;
+const SEEDED_DAYS = 60;
 const SEEDED_RECORDS_PER_DAY = 5;
 
 function randomIntInclusive(min: number, max: number): number {
