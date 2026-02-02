@@ -52,10 +52,7 @@ export default function ExchangeTab() {
 
       for (const baseCurrency of bookkeepingCurrencies) {
         await ensureExchangeRates(baseCurrency, targetCurrency);
-        const data = await getStoredExchangeRates(
-          baseCurrency,
-          targetCurrency,
-        );
+        const data = await getStoredExchangeRates(baseCurrency, targetCurrency);
         if (data && Object.keys(data.rates).length > 0) {
           dataList.push(data);
         }
@@ -166,7 +163,7 @@ export default function ExchangeTab() {
                 `${data.baseCurrency}/${data.targetCurrency} - Level: insufficient-data`,
                 `Period: ${levelPeriod}`,
                 `Dates count: ${dates.length}`,
-                `Date range: ${dates[0]} to ${latestDate}`
+                `Date range: ${dates[0]} to ${latestDate}`,
               );
             }
 
