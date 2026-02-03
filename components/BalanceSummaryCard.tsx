@@ -1,21 +1,33 @@
+/**
+ * 余额摘要卡片组件
+ * 显示所有启用的记账币种及其余额
+ * 支持自动刷新和订阅设置变化
+ */
 import { useFocusEffect } from "@react-navigation/native";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Platform, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 import { getCurrencyByCode } from "@/data/currencies";
 import { getBalances } from "@/utils/dataManager";
 import { getSettings, subscribeSettings } from "@/utils/settingsManager";
 
+// 主题色彩常量
 const BG_COLOR = "rgb(253, 247, 245)";
 const HEADER_COLOR = "rgb(128, 75, 56)";
 const DIVIDER_COLOR = "rgb(239, 222, 216)";
 const DARK_GRAY = "rgba(54, 48, 46, 1)";
 
+/**
+ * 数值保留两位小数（避免浮点误差）
+ */
 function toFixed2(value: number): string {
   const normalized = Math.abs(value) < 1e-9 ? 0 : value;
   return normalized.toFixed(2);
 }
 
+/**
+ * 金额格式化（千分位）
+ */
 function formatAmount(value: number): string {
   const fixed = toFixed2(Math.abs(value));
   const unsigned = fixed;
@@ -25,6 +37,9 @@ function formatAmount(value: number): string {
   return `${intWithCommas}.${fracPart}`;
 }
 
+/**
+ * 拼接币种符号与金额
+ */
 function formatCurrencyAmount(symbol: string, value: number): string {
   const sign = value < 0 ? "-" : " ";
   return `${sign}${symbol}${formatAmount(value)}`;
@@ -34,6 +49,7 @@ export default function BalanceSummaryCard() {
   const [currencyCodes, setCurrencyCodes] = useState<string[]>(["USD"]);
   const [balances, setBalances] = useState<Record<string, number>>({});
 
+  // 读取设置与余额
   const refresh = useCallback(async () => {
     const s = await getSettings();
 
@@ -104,12 +120,14 @@ export default function BalanceSummaryCard() {
     };
   }, [refresh]);
 
+  // 页面获得焦点时刷新
   useFocusEffect(
     useCallback(() => {
       refresh().catch((e) => console.error("Failed to refresh balances:", e));
     }, [refresh]),
   );
 
+  // 生成展示行
   const rows = useMemo(() => {
     return currencyCodes.map((code) => {
       const meta = getCurrencyByCode(code);

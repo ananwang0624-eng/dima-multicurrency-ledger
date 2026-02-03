@@ -1,3 +1,7 @@
+/**
+ * 交易记录单项组件
+ * 显示单条交易记录，包括分类图标、描述、时间和金额
+ */
 import { useMemo } from "react";
 import {
   Pressable,
@@ -13,16 +17,22 @@ import { ICON_TILE_ITEMS } from "@/data/iconTileItems";
 import type { TransactionRecord } from "@/utils/dataManager";
 
 type Props = {
-  record: TransactionRecord;
-  style?: ViewStyle;
-  onPress?: () => void;
-  testID?: string;
+  record: TransactionRecord; // 交易记录
+  style?: ViewStyle; // 自定义样式
+  onPress?: () => void; // 点击事件
+  testID?: string; // 测试 ID
 };
 
+/**
+ * 数字补零
+ */
 function pad2(n: number) {
   return String(n).padStart(2, "0");
 }
 
+/**
+ * 交易时间格式化（MM-DD HH:mm）
+ */
 function formatRecordTime(dateIso: string): string {
   const date = new Date(dateIso);
   if (Number.isNaN(date.getTime())) return "";
@@ -33,11 +43,17 @@ function formatRecordTime(dateIso: string): string {
   return `${month}-${day} ${hour}:${minute}`;
 }
 
+/**
+ * 保留两位小数
+ */
 function toFixed2(value: number): string {
   const normalized = Math.abs(value) < 1e-9 ? 0 : value;
   return normalized.toFixed(2);
 }
 
+/**
+ * 金额格式化（千分位）
+ */
 function formatAmount(value: number): string {
   const fixed = toFixed2(Math.abs(value));
   const [intPart, fracPart = "00"] = fixed.split(".");
@@ -45,6 +61,9 @@ function formatAmount(value: number): string {
   return `${intWithCommas}.${fracPart}`;
 }
 
+/**
+ * 币种符号 + 金额
+ */
 function formatCurrencyAmount(symbol: string, value: number): string {
   const sign = value < 0 ? "-" : "";
   return `${sign}${symbol}${formatAmount(value)}`;
@@ -56,6 +75,7 @@ export default function TransactionRecordItem({
   onPress,
   testID,
 }: Props) {
+  // 解析分类图标
   const categoryItem = useMemo(() => {
     return (
       ICON_TILE_ITEMS.find((it) => it.value === record.category) ??
@@ -63,6 +83,7 @@ export default function TransactionRecordItem({
     );
   }, [record.category]);
 
+  // 备注为空时用分类名兜底
   const descriptionText = useMemo(() => {
     const trimmed = record.description?.trim();
     return trimmed && trimmed.length > 0 ? trimmed : categoryItem.label;
@@ -70,6 +91,7 @@ export default function TransactionRecordItem({
 
   const timeText = useMemo(() => formatRecordTime(record.date), [record.date]);
 
+  // 收入为正、支出为负
   const amountText = useMemo(() => {
     const symbol = getCurrencyByCode(record.currency)?.symbol ?? "";
     const signed = record.type === "income" ? record.amount : -record.amount;

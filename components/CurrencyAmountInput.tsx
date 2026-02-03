@@ -1,3 +1,7 @@
+/**
+ * 币种金额输入组件
+ * 组合币种选择器和金额输入框，支持下拉选择币种
+ */
 import { useMemo, useState } from "react";
 import {
   FlatList,
@@ -16,6 +20,7 @@ import {
   type Currency,
 } from "@/data/currencies";
 
+// 主题色彩常量
 const COLORS = {
   active: "rgb(128, 75, 56)",
   inactiveText: "rgb(133, 115, 110)",
@@ -31,16 +36,17 @@ export function CurrencyAmountInput({
   currencyCodes,
   style,
 }: {
-  currencyCode: string;
-  onCurrencyChange: (nextCode: string) => void;
-  amount: string;
-  onAmountChange: (nextAmount: string) => void;
-  currencyCodes?: string[];
-  style?: ViewStyle;
+  currencyCode: string; // 当前选中的币种代码
+  onCurrencyChange: (nextCode: string) => void; // 币种变化回调
+  amount: string; // 金额字符串
+  onAmountChange: (nextAmount: string) => void; // 金额变化回调
+  currencyCodes?: string[]; // 限定的币种代码列表（可选）
+  style?: ViewStyle; // 自定义样式
 }) {
   const [open, setOpen] = useState(false);
   const [selection, setSelection] = useState<{ start: number; end: number }>();
 
+  // 可选币种（若传入限定列表则过滤）
   const options = useMemo<Currency[]>(() => {
     if (!currencyCodes || currencyCodes.length === 0) return CURRENCIES;
 
@@ -53,6 +59,7 @@ export function CurrencyAmountInput({
     return resolved.length > 0 ? resolved : CURRENCIES;
   }, [currencyCodes]);
 
+  // 当前选中币种（兜底到列表首项）
   const currency = useMemo<Currency>(() => {
     const normalized = currencyCode.toUpperCase();
     return (
@@ -65,11 +72,13 @@ export function CurrencyAmountInput({
 
   return (
     <View style={[styles.container, style]}>
+      {/* 币种选择按钮 */}
       <Pressable style={styles.currencyButton} onPress={() => setOpen(true)}>
         <Text style={styles.currencySymbol}>{currency.symbol}</Text>
         <Text style={styles.currencyChevron}>▾</Text>
       </Pressable>
 
+      {/* 金额输入框（用自定义占位文本避免 Android 基线问题） */}
       <View style={styles.amountField}>
         {amount.length === 0 ? (
           <Text style={styles.amountPlaceholder} pointerEvents="none">
@@ -80,7 +89,7 @@ export function CurrencyAmountInput({
         <TextInput
           value={amount}
           onChangeText={onAmountChange}
-          // Use a custom placeholder Text to avoid Android baseline quirks.
+          // 使用自定义占位文字以避免 Android baseline 偏移
           placeholder=""
           keyboardType="decimal-pad"
           inputMode="decimal"
@@ -97,6 +106,7 @@ export function CurrencyAmountInput({
         />
       </View>
 
+      {/* 币种下拉选择 */}
       <Modal
         visible={open}
         transparent

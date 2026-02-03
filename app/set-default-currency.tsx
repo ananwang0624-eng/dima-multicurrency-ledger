@@ -7,7 +7,7 @@ import {
   View,
 } from "react-native";
 
-import { CURRENCIES, getCurrencyByCode } from "@/data/currencies";
+import { CURRENCIES } from "@/data/currencies";
 import {
   getSettings,
   setDefaultCurrencyCode,

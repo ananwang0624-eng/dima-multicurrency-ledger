@@ -37,6 +37,7 @@ export default function ExpenseCategoryPieChart({
   width = 280,
   height = 200,
 }: ExpenseCategoryPieChartProps) {
+  // 将金额统一转换成默认币种
   // 将金额转换为默认货币
   const convertToDefaultCurrency = (
     amount: number,

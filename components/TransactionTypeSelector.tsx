@@ -54,6 +54,7 @@ function WheelPicker({
   }, [selectedValue, options]);
 
   useEffect(() => {
+    // 保持滚轮与外部受控值一致
     listRef.current?.scrollToOffset({
       offset: selectedIndex * itemHeight,
       animated: false,
@@ -146,6 +147,7 @@ export default function TransactionTypeSelector({
 }: TransactionTypeSelectorProps) {
   const [modalVisible, setModalVisible] = useState(false);
 
+  // 打开/关闭选择器
   const open = useCallback(() => setModalVisible(true), []);
   const close = useCallback(() => setModalVisible(false), []);
 
@@ -174,6 +176,7 @@ export default function TransactionTypeSelector({
         animationType="fade"
         onRequestClose={close}
       >
+        {/* 选择面板 */}
         <View style={styles.modalOverlay}>
           <Pressable style={styles.modalBackdrop} onPress={close} />
           <View style={styles.modalPanel}>

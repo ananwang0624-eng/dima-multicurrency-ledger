@@ -1,5 +1,10 @@
+/**
+ * 汇率卡片组件
+ * 显示汇率信息、趋势箭头和 5 档水平指示器
+ */
 import { StyleSheet, Text, View } from "react-native";
 
+// 主题色彩常量
 const BG_COLOR = "rgb(253, 247, 245)";
 const HEADER_COLOR = "rgb(128, 75, 56)";
 const DIVIDER_COLOR = "rgb(239, 222, 216)";
@@ -11,11 +16,11 @@ const LEVEL_INDICATOR_COLOR = "rgb(128, 75, 56)";
 type TrendType = "up" | "down" | "flat" | "insufficient-data";
 
 interface ExchangeRateCardProps {
-  baseCurrency: string;
-  targetCurrency: string;
-  currentRate: number;
-  trend: TrendType;
-  level: number | "insufficient-data";
+  baseCurrency: string; // 基准币种
+  targetCurrency: string; // 目标币种
+  currentRate: number; // 当前汇率
+  trend: TrendType; // 趋势类型
+  level: number | "insufficient-data"; // 水平位置 (1-5)
 }
 
 export default function ExchangeRateCard({
@@ -25,6 +30,7 @@ export default function ExchangeRateCard({
   trend,
   level,
 }: ExchangeRateCardProps) {
+  // 根据趋势渲染箭头
   const renderTrendArrow = () => {
     if (trend === "up") {
       return <Text style={styles.trendUp}>↑</Text>;
@@ -37,6 +43,7 @@ export default function ExchangeRateCard({
     }
   };
 
+  // 5 档水平指示器
   const renderLevelIndicator = () => {
     const effectiveLevel = typeof level === "number" ? level : 0;
 
@@ -61,6 +68,7 @@ export default function ExchangeRateCard({
 
   return (
     <View style={styles.card}>
+      {/* 汇率 + 趋势 + 水平指示 */}
       <View style={styles.row}>
         <Text style={styles.title}>
           {baseCurrency}/{targetCurrency}

@@ -23,6 +23,7 @@ export default function SubmenuNavButton({
     <Pressable
       testID={testID}
       accessibilityRole="button"
+      // 跳转到子菜单页面
       onPress={() => router.push(href)}
       style={({ pressed }) => [
         styles.container,

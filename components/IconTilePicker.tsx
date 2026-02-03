@@ -1,3 +1,7 @@
+/**
+ * 图标磁贴选择器组件
+ * 显示 8 个分类图标，以两行四列的格式布局
+ */
 import { useMemo } from "react";
 import {
   Pressable,
@@ -15,6 +19,7 @@ import {
   type IconTilePickerValue,
 } from "@/data/iconTileItems";
 
+// 主题色彩常量
 const COLORS = {
   tileBg: "rgb(246, 233, 228)",
   active: "rgb(128, 75, 56)",
@@ -35,6 +40,7 @@ export function IconTilePicker({
   const { width: windowWidth } = useWindowDimensions();
   const items = ICON_TILE_ITEMS;
 
+  // 根据屏幕宽度计算单个图块大小
   const tileSize = useMemo(() => {
     const horizontalPadding = 16;
     const columnGap = 12;
@@ -42,13 +48,15 @@ export function IconTilePicker({
     return Math.floor((available - columnGap * 3) / 4);
   }, [windowWidth]);
 
+  // 两行四列
   const rows = useMemo<IconTileItem[][]>(
     () => [items.slice(0, 4), items.slice(4, 8)],
-    [items]
+    [items],
   );
 
   return (
     <View style={[styles.container, style]}>
+      {/* 分类图标网格 */}
       {rows.map((row, rowIndex) => (
         <View key={rowIndex} style={styles.row}>
           {row.map((item) => {

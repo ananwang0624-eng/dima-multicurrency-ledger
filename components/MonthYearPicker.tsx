@@ -1,3 +1,7 @@
+/**
+ * 年月选择器组件
+ * 提供滚轮式的年份和月份选择，并显示记录数量
+ */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FlatList,
@@ -10,6 +14,7 @@ import {
   type ViewStyle,
 } from "react-native";
 
+// 主题色彩常量
 const COLORS = {
   background: "rgb(253, 247, 245)",
   panelBg: "rgb(246, 233, 228)",
@@ -19,10 +24,16 @@ const COLORS = {
   overlay: "rgba(0,0,0,0.25)",
 } as const;
 
+/**
+ * 数字补零
+ */
 function pad2(n: number) {
   return String(n).padStart(2, "0");
 }
 
+/**
+ * 生成连续数字数组（包含边界）
+ */
 function rangeInclusive(start: number, end: number) {
   const out: number[] = [];
   for (let i = start; i <= end; i += 1) out.push(i);
@@ -31,6 +42,10 @@ function rangeInclusive(start: number, end: number) {
 
 type FieldType = "year" | "month";
 
+/**
+ * 滚轮选择器组件
+ * 支持滚动选择数值
+ */
 function WheelPicker({
   values,
   selectedValue,
@@ -56,7 +71,7 @@ function WheelPicker({
   }, [selectedValue, values]);
 
   useEffect(() => {
-    // Keep the list aligned with the controlled value.
+    // 保持滚轮与外部受控值一致
     listRef.current?.scrollToOffset({
       offset: selectedIndex * itemHeight,
       animated: false,
@@ -165,6 +180,7 @@ export function MonthYearPicker({
 
   const months = useMemo(() => rangeInclusive(1, 12), []);
 
+  // 打开/关闭选择器
   const open = useCallback((field: FieldType) => setActiveField(field), []);
   const close = useCallback(() => setActiveField(null), []);
 
@@ -196,6 +212,7 @@ export function MonthYearPicker({
         <Text style={styles.label}>Records</Text>
 
         <View style={styles.pickerRow}>
+          {/* 年月选择 */}
           <Pressable
             style={({ pressed }) => [
               styles.pickerBox,
@@ -230,6 +247,7 @@ export function MonthYearPicker({
         animationType="fade"
         onRequestClose={close}
       >
+        {/* 选择面板 */}
         <View style={styles.modalOverlay}>
           <Pressable style={styles.modalBackdrop} onPress={close} />
           <View style={styles.modalPanel}>

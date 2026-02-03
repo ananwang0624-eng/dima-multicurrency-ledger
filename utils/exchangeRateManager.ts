@@ -1,6 +1,16 @@
 /**
+ * 汇率管理器
+ * 负责从 Frankfurter API 获取、存储和管理汇率数据
+ * 支持汇率趋势分析和水平位置计算
+ *
+ * Frankfurter API: https://www.frankfurter.app/docs/
+ * - 免费、无需 API key
+ * - 支持历史数据
+ */
+
+/**
  * 判断当前汇率在过去30天历史区间的五档位置（1最低-5最高）
- * 返回 1~5 或 'insufficient-data'
+ * @returns 1~5 或 'insufficient-data'
  */
 export function getMonthlyRateLevel(
   data: ExchangeRateData,
@@ -126,17 +136,22 @@ export function getMonthlyTrend(
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // 使用 Frankfurter API（免费、无需 API key、支持历史数据）
-// 文档: https://www.frankfurter.app/docs/
 const FRANKFURTER_API_BASE_URL = "https://api.frankfurter.app";
 const EXCHANGE_RATE_STORAGE_KEY = "dima:exchange_rates:v1";
 
+/**
+ * 汇率数据类型
+ */
 export type ExchangeRateData = {
-  baseCurrency: string; // 基准货币（记账货币）- API 的 base 参数
-  targetCurrency: string; // 目标货币（默认货币）- API 的 symbols 参数
+  baseCurrency: string; // 基准货币（记账货币）
+  targetCurrency: string; // 目标货币（默认货币）
   rates: Record<string, number>; // 日期 (YYYY-MM-DD) -> 汇率（1 baseCurrency = X targetCurrency）
   lastUpdated: string; // ISO 8601 格式的最后更新时间
 };
 
+/**
+ * Frankfurter API 时间序列响应类型
+ */
 type FixerTimeseriesResponse = {
   amount: number;
   base: string;
@@ -190,7 +205,11 @@ async function saveExchangeRates(data: ExchangeRateData): Promise<void> {
 
 /**
  * 从 Frankfurter API 获取历史汇率
- * Frankfurter 是免费的、无需 API key、支持历史数据
+ * @param baseCurrency 基准货币代码
+ * @param targetCurrency 目标货币代码
+ * @param startDate 开始日期 (YYYY-MM-DD)
+ * @param endDate 结束日期 (YYYY-MM-DD)
+ * @returns 日期到汇率的映射
  */
 async function fetchExchangeRatesFromAPI(
   baseCurrency: string,
@@ -224,6 +243,10 @@ async function fetchExchangeRatesFromAPI(
 /**
  * 获取或更新汇率数据
  * 如果本地数据不存在或过期，则从 API 获取缺失的数据
+ * 自动保留过去一年的数据
+ * @param baseCurrency 基准货币代码
+ * @param targetCurrency 目标货币代码
+ * @returns 汇率数据对象
  */
 export async function ensureExchangeRates(
   baseCurrency: string,
@@ -324,6 +347,8 @@ export async function ensureExchangeRates(
 
 /**
  * 获取汇率数据的摘要信息
+ * @param data 汇率数据对象
+ * @returns 汇率数据摘要或 null
  */
 export function getExchangeRateSummary(data: ExchangeRateData | null): {
   baseCurrency: string;
@@ -347,6 +372,9 @@ export function getExchangeRateSummary(data: ExchangeRateData | null): {
 /**
  * 根据日期获取汇率
  * 如果指定日期没有汇率，返回最近的可用汇率
+ * @param data 汇率数据对象
+ * @param date 日期字符串 (YYYY-MM-DD)
+ * @returns 汇率值或 null
  */
 export function getExchangeRateForDate(
   data: ExchangeRateData,

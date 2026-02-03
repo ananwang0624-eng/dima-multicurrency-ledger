@@ -44,6 +44,7 @@ function WheelPicker<T extends string>({
   }, [selectedValue, values]);
 
   useEffect(() => {
+    // 保持滚轮与外部受控值一致
     listRef.current?.scrollToOffset({
       offset: selectedIndex * itemHeight,
       animated: false,
@@ -156,6 +157,7 @@ export function OptionPicker<T extends string>({
 }: OptionPickerProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
 
+  // 打开/关闭选择器
   const open = useCallback(() => setIsOpen(true), []);
   const close = useCallback(() => setIsOpen(false), []);
 
@@ -181,6 +183,7 @@ export function OptionPicker<T extends string>({
         animationType="fade"
         onRequestClose={close}
       >
+        {/* 选择面板 */}
         <View style={styles.modalOverlay}>
           <Pressable style={styles.modalBackdrop} onPress={close} />
           <View style={styles.modalPanel}>

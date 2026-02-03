@@ -1,8 +1,11 @@
+/**
+ * 汇率标签页
+ * 显示各记账币种对默认币种的汇率信息、趋势和水平位置
+ */
 import { useFocusEffect } from "@react-navigation/native";
 import { getSettings, subscribeSettings } from "@/utils/settingsManager";
 import {
   ensureExchangeRates,
-  getExchangeRateSummary,
   getStoredExchangeRates,
   getDailyTrend,
   getWeeklyTrend,
@@ -29,16 +32,17 @@ export default function ExchangeTab() {
   const [isLoadingRates, setIsLoadingRates] = useState(true);
   const [ratesError, setRatesError] = useState<string | null>(null);
 
-  // Trend time range: day/week/month
+  // 趋势时间范围：天/周/月
   const [trendPeriod, setTrendPeriod] = useState<
     "daily" | "weekly" | "monthly"
   >("daily");
 
-  // Level time range: month/year
+  // 水平区间：月/年
   const [levelPeriod, setLevelPeriod] = useState<"monthly" | "yearly">(
     "monthly",
   );
 
+  // 加载并聚合汇率数据
   const loadExchangeRates = useCallback(async () => {
     try {
       setIsLoadingRates(true);
@@ -50,6 +54,7 @@ export default function ExchangeTab() {
 
       const dataList: ExchangeRateData[] = [];
 
+      // 为每个记账币种加载汇率
       for (const baseCurrency of bookkeepingCurrencies) {
         await ensureExchangeRates(baseCurrency, targetCurrency);
         const data = await getStoredExchangeRates(baseCurrency, targetCurrency);
@@ -67,11 +72,12 @@ export default function ExchangeTab() {
     }
   }, []);
 
+  // 组件加载时初始化汇率
   useEffect(() => {
     loadExchangeRates();
   }, [loadExchangeRates]);
 
-  // Subscribe to settings changes
+  // 监听设置变化并刷新
   useEffect(() => {
     const unsubscribe = subscribeSettings(() => {
       loadExchangeRates();
@@ -79,7 +85,7 @@ export default function ExchangeTab() {
     return unsubscribe;
   }, [loadExchangeRates]);
 
-  // Refresh data when page gains focus
+  // 页面获得焦点时刷新
   useFocusEffect(
     useCallback(() => {
       loadExchangeRates();
@@ -93,7 +99,7 @@ export default function ExchangeTab() {
 
       <View style={{ height: 16 }} />
 
-      {/* Trend and level time range selector */}
+      {/* 趋势与水平区间选择 */}
       <View style={{ flexDirection: "row", gap: 12 }}>
         <View style={{ flex: 1 }}>
           <OptionPicker
@@ -122,7 +128,7 @@ export default function ExchangeTab() {
 
       <View style={{ height: 16 }} />
 
-      {/* Exchange rate card list */}
+      {/* 汇率卡片列表 */}
       {isLoadingRates ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="small" color="rgb(128, 75, 56)" />
@@ -156,16 +162,6 @@ export default function ExchangeTab() {
               levelPeriod === "monthly"
                 ? getMonthlyRateLevel(data)
                 : getYearlyRateLevel(data);
-
-            // Debug information
-            if (level === "insufficient-data") {
-              console.log(
-                `${data.baseCurrency}/${data.targetCurrency} - Level: insufficient-data`,
-                `Period: ${levelPeriod}`,
-                `Dates count: ${dates.length}`,
-                `Date range: ${dates[0]} to ${latestDate}`,
-              );
-            }
 
             return (
               <ExchangeRateCard
@@ -204,22 +200,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "rgb(133, 115, 110)",
-  },
-  exchangeRateCard: {
-    backgroundColor: "white",
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "rgb(128, 75, 56)",
-    marginBottom: 12,
   },
   loadingContainer: {
     flexDirection: "row",

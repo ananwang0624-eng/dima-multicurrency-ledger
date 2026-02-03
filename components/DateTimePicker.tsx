@@ -1,3 +1,7 @@
+/**
+ * 日期时间选择器组件
+ * 支持选择年、月、日、时、分，使用滚轮式界面
+ */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FlatList,
@@ -10,6 +14,7 @@ import {
   type ViewStyle,
 } from "react-native";
 
+// 主题色彩常量
 const COLORS = {
   background: "rgb(253, 247, 245)",
   panelBg: "rgb(246, 233, 228)",
@@ -21,15 +26,24 @@ const COLORS = {
 
 type DateTimeField = "year" | "month" | "day" | "hour" | "minute";
 
+/**
+ * 数字补零
+ */
 function pad2(n: number) {
   return String(n).padStart(2, "0");
 }
 
+/**
+ * 计算指定年月的天数
+ */
 function daysInMonth(year: number, month: number) {
   // month: 1-12
   return new Date(year, month, 0).getDate();
 }
 
+/**
+ * 生成连续数字数组（包含边界）
+ */
 function rangeInclusive(start: number, end: number) {
   const out: number[] = [];
   for (let i = start; i <= end; i += 1) out.push(i);
@@ -61,7 +75,7 @@ function WheelPicker({
   }, [selectedValue, values]);
 
   useEffect(() => {
-    // Keep the list aligned with the controlled value.
+    // 保持滚轮与外部受控值一致
     listRef.current?.scrollToOffset({
       offset: selectedIndex * itemHeight,
       animated: false,
@@ -70,6 +84,7 @@ function WheelPicker({
 
   const onMomentumEnd = useCallback(
     (offsetY: number) => {
+      // 根据滚动位置取最近值
       const rawIndex = offsetY / itemHeight;
       const nextIndex = Math.round(rawIndex);
       const clampedIndex = Math.max(0, Math.min(values.length - 1, nextIndex));
@@ -78,7 +93,7 @@ function WheelPicker({
         onValueChange(nextValue);
       }
     },
-    [itemHeight, onValueChange, selectedValue, values]
+    [itemHeight, onValueChange, selectedValue, values],
   );
 
   const renderItem = useCallback(
@@ -99,7 +114,7 @@ function WheelPicker({
         </View>
       );
     },
-    [format, itemHeight, selectedValue]
+    [format, itemHeight, selectedValue],
   );
 
   return (
@@ -174,7 +189,7 @@ export function DateTimePicker({
 
   const maxDay = useMemo(() => daysInMonth(year, month), [year, month]);
 
-  // If parent changes year/month and day goes out of range, clamp down to max.
+  // 当年份/月份变化导致日期越界时，自动回落到最大值
   useEffect(() => {
     if (day > maxDay) onDayChange(maxDay);
   }, [day, maxDay, onDayChange]);
@@ -190,25 +205,28 @@ export function DateTimePicker({
   const hours = useMemo(() => rangeInclusive(0, 23), []);
   const minutes = useMemo(() => rangeInclusive(0, 59), []);
 
+  // 打开/关闭选择器
   const open = useCallback((field: DateTimeField) => setActiveField(field), []);
   const close = useCallback(() => setActiveField(null), []);
 
+  // 选择年份时同步修正最大日期
   const onPickYear = useCallback(
     (nextYear: number) => {
       onYearChange(nextYear);
       const nextMax = daysInMonth(nextYear, month);
       if (day > nextMax) onDayChange(nextMax);
     },
-    [day, month, onDayChange, onYearChange]
+    [day, month, onDayChange, onYearChange],
   );
 
+  // 选择月份时同步修正最大日期
   const onPickMonth = useCallback(
     (nextMonth: number) => {
       onMonthChange(nextMonth);
       const nextMax = daysInMonth(year, nextMonth);
       if (day > nextMax) onDayChange(nextMax);
     },
-    [day, onDayChange, onMonthChange, year]
+    [day, onDayChange, onMonthChange, year],
   );
 
   const modalTitle = useMemo(() => {
@@ -291,6 +309,7 @@ export function DateTimePicker({
 
   return (
     <View style={[styles.row, style]}>
+      {/* 日期时间字段 */}
       <Pressable
         style={({ pressed }) => [
           styles.box,
@@ -348,6 +367,7 @@ export function DateTimePicker({
         animationType="fade"
         onRequestClose={close}
       >
+        {/* 选择面板 */}
         <View style={styles.modalOverlay}>
           <Pressable style={styles.modalBackdrop} onPress={close} />
           <View style={styles.modalPanel}>

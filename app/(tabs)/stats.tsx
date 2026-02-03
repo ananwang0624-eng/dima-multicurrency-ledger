@@ -1,4 +1,7 @@
-import DateAmountLineChart from "@/components/DateAmountLineChart";
+/**
+ * 统计标签页
+ * 显示按月和类型筛选的收支分类饼图
+ */
 import ExpenseCategoryPieChart from "@/components/ExpenseCategoryPieChart";
 import { MonthYearPicker } from "@/components/MonthYearPicker";
 import TransactionTypeSelector from "@/components/TransactionTypeSelector";
@@ -19,6 +22,7 @@ import { CURRENCIES } from "@/data/currencies";
 type TransactionType = "income" | "expense";
 
 export default function StatsTab() {
+  // 初始化为当前年月
   const now = useMemo(() => new Date(), []);
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
@@ -30,6 +34,7 @@ export default function StatsTab() {
     Map<string, ExchangeRateData>
   >(new Map());
 
+  // 拉取指定月份的交易记录
   const refreshTransactions = useCallback(async () => {
     const yearMonth = `${selectedYear}-${String(selectedMonth).padStart(2, "0")}`;
     const list = await getTransactionsByMonth(yearMonth);
@@ -40,6 +45,7 @@ export default function StatsTab() {
     refreshTransactions();
   }, [refreshTransactions]);
 
+  // 订阅数据变化
   useEffect(() => {
     const unsubscribe = subscribeDataChanges(() => {
       refreshTransactions();
@@ -48,7 +54,7 @@ export default function StatsTab() {
     return unsubscribe;
   }, [refreshTransactions]);
 
-  // 加载设置和汇率
+  // 加载设置与汇率（用于统一币种展示）
   useEffect(() => {
     const loadSettingsAndRates = async () => {
       const settings = await getSettings();
@@ -140,17 +146,6 @@ const styles = StyleSheet.create({
   content: {
     padding: 20,
   },
-  title: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: "rgb(128, 75, 56)",
-  },
-  subtitle: {
-    marginTop: 8,
-    fontSize: 14,
-    fontWeight: "600",
-    color: "rgb(133, 115, 110)",
-  },
   selectorsRow: {
     marginTop: 16,
     flexDirection: "row",
@@ -185,10 +180,5 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "rgb(133, 115, 110)",
     marginBottom: 12,
-  },
-  infoText: {
-    fontSize: 14,
-    color: "rgb(87, 83, 78)",
-    lineHeight: 20,
   },
 });

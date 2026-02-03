@@ -1,3 +1,8 @@
+/**
+ * 记账数据管理器
+ * 负责管理本地存储的记账数据，包括交易记录和余额信息
+ * 数据存储格式：JSON 文件，按月份分组组织交易记录
+ */
 import * as Crypto from "expo-crypto";
 import { File, Paths } from "expo-file-system";
 
@@ -7,9 +12,13 @@ import type { IconTilePickerValue } from "@/data/iconTileItems";
 const DATA_FILE_NAME = "bookkeeping_data.json";
 const dataFile = new File(Paths.document, DATA_FILE_NAME);
 
+// 数据变更监听器类型
 type DataChangeListener = () => void;
 const dataChangeListeners = new Set<DataChangeListener>();
 
+/**
+ * 通知所有监听器数据已变更
+ */
 function notifyDataChange(): void {
   for (const listener of dataChangeListeners) {
     try {
@@ -21,8 +30,10 @@ function notifyDataChange(): void {
 }
 
 /**
- * Subscribe to bookkeeping data changes.
- * Triggered after the data file is successfully written.
+ * 订阅记账数据变更事件
+ * 在数据文件成功写入后触发
+ * @param listener 监听器函数
+ * @returns 取消订阅的函数
  */
 export function subscribeDataChanges(listener: DataChangeListener): () => void {
   dataChangeListeners.add(listener);
@@ -31,27 +42,42 @@ export function subscribeDataChanges(listener: DataChangeListener): () => void {
   };
 }
 
+/**
+ * 交易记录类型
+ */
 export type TransactionRecord = {
-  uuid: string;
-  amount: number;
-  currency: string;
-  category: IconTilePickerValue;
-  date: string;
-  description?: string;
-  type: "income" | "expense";
+  uuid: string; // 唯一标识符
+  amount: number; // 金额（必须为正数）
+  currency: string; // 币种代码
+  category: IconTilePickerValue; // 分类索引 (0-8)
+  date: string; // ISO 8601 / RFC 3339 日期时间字符串
+  description?: string; // 可选描述
+  type: "income" | "expense"; // 类型：收入或支出
 };
 
+/**
+ * 按币种统计的余额
+ * 键：币种代码，值：余额数值
+ */
 export type BalancesByCurrency = Record<string, number>;
 
+// ISO 8601 / RFC 3339 日期时间格式正则表达式
 const ISO_8601_RFC_3339_DATE_TIME =
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?(?:Z|[+-]\d{2}:\d{2})$/;
 
+/**
+ * 验证字符串是否为有效的 ISO 8601 / RFC 3339 日期时间格式
+ */
 function isIso8601Rfc3339DateTime(value: string): boolean {
   if (!ISO_8601_RFC_3339_DATE_TIME.test(value)) return false;
   const timestamp = Date.parse(value);
   return !Number.isNaN(timestamp);
 }
 
+/**
+ * 验证交易记录的完整性和有效性
+ * @throws {Error} 如果记录不符合规范则抛出错误
+ */
 function validateTransactionRecord(record: TransactionRecord): void {
   if (!record.uuid || typeof record.uuid !== "string") {
     throw new Error("Invalid transaction: uuid is required");
@@ -102,17 +128,23 @@ function validateTransactionRecord(record: TransactionRecord): void {
 }
 
 /**
- * Data structure grouped by year-month (YYYY-MM).
- * Example: { "2025-12": [...], "2025-11": [...] }
+ * 记账数据结构，按年-月分组 (YYYY-MM)
+ * 示例：{ "2025-12": [...], "2025-11": [...] }
  */
 export type BookkeepingData = Record<string, TransactionRecord[]>;
 
+/**
+ * 记账文件结构（版本 2）
+ */
 type BookkeepingFile = {
   version: 2;
-  transactionsByMonth: BookkeepingData;
-  balances: BalancesByCurrency;
+  transactionsByMonth: BookkeepingData; // 按月分组的交易记录
+  balances: BalancesByCurrency; // 各币种余额
 };
 
+/**
+ * 创建默认的余额对象（所有支持的币种余额均为 0）
+ */
 function createDefaultBalances(): BalancesByCurrency {
   return Object.fromEntries(CURRENCIES.map((c) => [c.code, 0] as const));
 }
@@ -134,6 +166,11 @@ function normalizeBalancesForWrite(
   return normalized;
 }
 
+/**
+ * 根据交易记录计算所有币种的余额
+ * @param transactionsByMonth 按月分组的交易记录
+ * @returns 每种币种的余额
+ */
 function computeBalances(
   transactionsByMonth: BookkeepingData,
 ): BalancesByCurrency {
@@ -318,7 +355,7 @@ function generateSeededTestTransactions(
 }
 
 /**
- * Clear all bookkeeping records.
+ * 清空所有记账记录
  */
 export async function clearAllTransactions(): Promise<void> {
   await initializeDataFile();
@@ -326,12 +363,12 @@ export async function clearAllTransactions(): Promise<void> {
 }
 
 /**
- * Seed random test transactions for manual testing.
- * - Range: last ~1 month (recent 30 days, including today)
- * - Density: 5 records per day
- * - Currencies: CNY / EUR only
- * - Category: random 0-7
- * Idempotent: existing seed UUIDs are removed before inserting.
+ * 生成确定性的测试交易记录用于手动测试
+ * - 范围：最近约 1 个月（近 30 天，包括今天）
+ * - 密度：每天 5 条记录
+ * - 币种：仅 CNY / EUR
+ * - 分类：随机 0-7
+ * 幂等性：插入前会移除现有的种子 UUID
  */
 export async function seedDeterministicTestTransactions(): Promise<void> {
   await initializeDataFile();
@@ -368,24 +405,26 @@ export async function seedDeterministicTestTransactions(): Promise<void> {
 }
 
 /**
- * Generate a UUID for new transaction records.
+ * 为新交易记录生成 UUID
+ * @returns 随机 UUID 字符串
  */
 export function generateUUID(): string {
   return Crypto.randomUUID();
 }
 
 /**
- * Extract year-month key from ISO date string.
- * @param date ISO date string (e.g., "2025-12-29T10:30:00.000+01:00")
- * @returns Year-month key (e.g., "2025-12")
+ * 从 ISO 日期字符串提取年-月键
+ * @param date ISO 日期字符串（例如："2025-12-29T10:30:00.000+01:00"）
+ * @returns 年-月键（例如："2025-12"）
  */
 export function getYearMonthKey(date: string): string {
   return date.substring(0, 7); // "YYYY-MM"
 }
 
 /**
- * Add a transaction record to the data.
- * Automatically groups by year-month and sorts by date (descending).
+ * 添加交易记录到数据中
+ * 自动按年-月分组并按日期排序（降序）
+ * @param record 要添加的交易记录
  */
 export async function addTransaction(record: TransactionRecord): Promise<void> {
   const normalizedRecord: TransactionRecord = {
@@ -420,40 +459,40 @@ export async function addTransaction(record: TransactionRecord): Promise<void> {
 }
 
 /**
- * Get transactions for a specific year-month.
- * @param yearMonth Year-month key (e.g., "2025-12")
- * @returns Array of transactions for that month
+ * 获取指定年-月的交易记录
+ * @param yearMonth 年-月键（例如："2025-12"）
+ * @returns 该月的交易记录数组
  */
 export async function getTransactionsByMonth(
-  yearMonth: string
+  yearMonth: string,
 ): Promise<TransactionRecord[]> {
   const file = await readBookkeepingFile();
   return file.transactionsByMonth[yearMonth] || [];
 }
 
 /**
- * Get all transactions across all months.
- * @returns Array of all transactions sorted by date (newest first)
+ * 获取所有月份的交易记录
+ * @returns 按日期排序（降序）的所有交易记录数组
  */
 export async function getAllTransactions(): Promise<TransactionRecord[]> {
   const file = await readBookkeepingFile();
   const allTransactions: TransactionRecord[] = [];
-  
+
   for (const records of Object.values(file.transactionsByMonth)) {
     allTransactions.push(...records);
   }
-  
-  // Sort by date in descending order (newest first)
+
+  // 按日期降序排序（最新的在前）
   allTransactions.sort((a, b) => {
     return new Date(b.date).getTime() - new Date(a.date).getTime();
   });
-  
+
   return allTransactions;
 }
 
 /**
- * Get all available year-month keys.
- * @returns Array of year-month keys sorted in descending order
+ * 获取所有可用的年-月键
+ * @returns 按降序排序的年-月键数组
  */
 export async function getAvailableMonths(): Promise<string[]> {
   const file = await readBookkeepingFile();
@@ -461,8 +500,8 @@ export async function getAvailableMonths(): Promise<string[]> {
 }
 
 /**
- * Initialize the data file on app startup.
- * Creates the file with default data if it doesn't exist.
+ * 在应用启动时初始化数据文件
+ * 如果文件不存在，则使用默认数据创建文件
  */
 export async function initializeDataFile(): Promise<void> {
   try {
@@ -491,6 +530,9 @@ export async function initializeDataFile(): Promise<void> {
   }
 }
 
+/**
+ * 从文件读取记账数据
+ */
 async function readBookkeepingFile(): Promise<BookkeepingFile> {
   try {
     const content = await dataFile.text();
@@ -502,6 +544,9 @@ async function readBookkeepingFile(): Promise<BookkeepingFile> {
   }
 }
 
+/**
+ * 将记账数据写入文件
+ */
 async function writeBookkeepingFile(file: BookkeepingFile): Promise<void> {
   try {
     const transactionsByMonth = file.transactionsByMonth ?? {};
@@ -522,7 +567,8 @@ async function writeBookkeepingFile(file: BookkeepingFile): Promise<void> {
 }
 
 /**
- * Read bookkeeping data from the file.
+ * 从文件读取记账数据
+ * @returns 按月分组的交易记录
  */
 export async function readData(): Promise<BookkeepingData> {
   const file = await readBookkeepingFile();
@@ -530,7 +576,8 @@ export async function readData(): Promise<BookkeepingData> {
 }
 
 /**
- * Write bookkeeping data to the file.
+ * 将记账数据写入文件
+ * @param data 要写入的记账数据
  */
 export async function writeData(data: BookkeepingData): Promise<void> {
   await writeBookkeepingFile({
@@ -540,20 +587,34 @@ export async function writeData(data: BookkeepingData): Promise<void> {
   });
 }
 
+/**
+ * 获取所有币种的余额
+ * @returns 各币种的余额对象
+ */
 export async function getBalances(): Promise<BalancesByCurrency> {
   const file = await readBookkeepingFile();
   return file.balances;
 }
 
+/**
+ * 获取指定币种的余额
+ * @param currencyCode 币种代码
+ * @returns 该币种的余额
+ */
 export async function getBalance(currencyCode: string): Promise<number> {
   const file = await readBookkeepingFile();
   const code = currencyCode.toUpperCase();
   return file.balances[code] ?? 0;
 }
 
+/**
+ * 设置指定币种的余额
+ * @param currencyCode 币种代码
+ * @param nextBalance 新的余额值
+ */
 export async function setBalance(
   currencyCode: string,
-  nextBalance: number
+  nextBalance: number,
 ): Promise<void> {
   const code = currencyCode.toUpperCase();
   if (!getCurrencyByCode(code)) {
@@ -569,7 +630,8 @@ export async function setBalance(
 }
 
 /**
- * Get the full path to the data file (useful for debugging).
+ * 获取数据文件的完整路径（用于调试）
+ * @returns 数据文件的 URI
  */
 export function getDataFilePath(): string {
   return dataFile.uri;

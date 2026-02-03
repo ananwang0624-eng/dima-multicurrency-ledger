@@ -1,18 +1,20 @@
+/**
+ * 币种数据定义
+ * 包含 Frankfurter API 支持的所有币种（基于欧洲央行数据）
+ */
+
+/**
+ * 币种类型
+ */
 export type Currency = {
-  /** ISO 4217 currency code, e.g. "USD" */
-  code: string;
-  /** English name, e.g. "US Dollar" */
-  name: string;
-  /** Common currency symbol, e.g. "$" */
-  symbol: string;
+  code: string; // ISO 4217 币种代码，例如 "USD"
+  name: string; // 英文名称，例如 "US Dollar"
+  symbol: string; // 常用币种符号，例如 "$"
 };
 
 /**
- * Currencies supported by Frankfurter API (based on ECB data).
- * Only includes currencies that have exchange rate data available.
- * - `name`: English name
- * - `code`: ISO 4217 code
- * - `symbol`: common symbol used in UIs
+ * Frankfurter API 支持的币种列表（基于欧洲央行数据）
+ * 仅包含有汇率数据的币种
  */
 export const CURRENCIES: Currency[] = [
   { code: "AUD", name: "Australian Dollar", symbol: "$" },
@@ -47,10 +49,18 @@ export const CURRENCIES: Currency[] = [
   { code: "ZAR", name: "South African Rand", symbol: "R" },
 ];
 
+/**
+ * 币种代码到币种对象的映射（用于快速查找）
+ */
 export const CURRENCIES_BY_CODE: Record<string, Currency> = Object.fromEntries(
-  CURRENCIES.map((currency) => [currency.code, currency])
+  CURRENCIES.map((currency) => [currency.code, currency]),
 );
 
+/**
+ * 根据币种代码获取币种对象
+ * @param code 币种代码（不区分大小写）
+ * @returns 币种对象或 undefined
+ */
 export function getCurrencyByCode(code: string): Currency | undefined {
   return CURRENCIES_BY_CODE[code.toUpperCase()];
 }

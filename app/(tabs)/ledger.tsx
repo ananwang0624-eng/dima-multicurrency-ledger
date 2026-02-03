@@ -1,3 +1,7 @@
+/**
+ * 记账标签页
+ * 支持添加支出、收入和换汇记录，包含分段选择器、金额输入、日期时间选择等功能
+ */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
@@ -22,10 +26,16 @@ import {
 import { addTransaction, generateUUID } from "@/utils/dataManager";
 import { getSettings, subscribeSettings } from "@/utils/settingsManager";
 
+// 数字补零：将数字转换为两位字符串
 function pad2(n: number) {
   return String(n).padStart(2, "0");
 }
 
+/**
+ * 转成本地时区 RFC3339 字符串
+ * @param date 日期对象
+ * @returns RFC3339 格式的日期时间字符串
+ */
 function toRfc3339Local(date: Date): string {
   const year = date.getFullYear();
   const month = pad2(date.getMonth() + 1);
@@ -44,6 +54,7 @@ function toRfc3339Local(date: Date): string {
   return `${year}-${month}-${day}T${hour}:${minute}:${second}.${ms}${sign}${offH}:${offM}`;
 }
 
+// 主题色彩常量
 const COLORS = {
   background: "rgb(253, 247, 245)",
   segmentBg: "rgb(246, 233, 228)",
@@ -52,14 +63,20 @@ const COLORS = {
   activeText: "#fff",
 };
 
+// 分段控件尺寸常量
 const SEGMENTED = {
   height: 52,
   padding: 6,
   radius: 14,
 } as const;
 
+// 分段选择器的值类型：0-支出, 1-收入, 2-换汇
 type SegmentedValue = 0 | 1 | 2;
 
+/**
+ * 记账类型分段选择器组件
+ * 支持点击和滑动操作切换三种记账类型
+ */
 function LedgerTypeSegmented({
   value,
   onChange,
@@ -68,9 +85,11 @@ function LedgerTypeSegmented({
   onChange: (next: SegmentedValue) => void;
 }) {
   const { width: windowWidth } = useWindowDimensions();
+  // 动画位置状态
   const position = useRef(new Animated.Value(value)).current;
   const dragStartPosition = useRef<number>(value);
 
+  // 当选中值变化时播放动画
   useEffect(() => {
     Animated.timing(position, {
       toValue: value,
@@ -79,16 +98,19 @@ function LedgerTypeSegmented({
     }).start();
   }, [position, value]);
 
+  // 计算分段控件总宽度
   const segmentedWidth = useMemo(
     () => Math.max(0, (windowWidth - 32) / 1.5),
     [windowWidth],
   );
 
+  // 计算指示器宽度
   const indicatorWidth = useMemo(() => {
     const innerWidth = Math.max(0, segmentedWidth - SEGMENTED.padding * 2);
     return innerWidth / 3;
   }, [segmentedWidth]);
 
+  // 指示器水平位移
   const indicatorTranslateX = useMemo(() => {
     if (segmentedWidth <= 0) return 0;
     return position.interpolate({
@@ -98,6 +120,7 @@ function LedgerTypeSegmented({
     });
   }, [position, segmentedWidth, indicatorWidth]);
 
+  // 跳转到指定索引
   const goTo = useCallback(
     (nextIndex: SegmentedValue) => {
       onChange(nextIndex);
@@ -110,20 +133,25 @@ function LedgerTypeSegmented({
     [onChange, position],
   );
 
+  // 手势响应器：支持滑动切换
   const panResponder = useMemo(
     () =>
       PanResponder.create({
+        // 判断是否应响应滑动
         onMoveShouldSetPanResponder: (_, gesture) =>
           Math.abs(gesture.dx) > 6 && Math.abs(gesture.dy) < 12,
+        // 开始拖动
         onPanResponderGrant: () => {
           dragStartPosition.current = value;
         },
+        // 拖动中
         onPanResponderMove: (_, gesture) => {
           if (indicatorWidth <= 0) return;
           const raw = dragStartPosition.current + gesture.dx / indicatorWidth;
           const clamped = Math.max(0, Math.min(1, raw));
           position.setValue(clamped);
         },
+        // 释放时自动吸附到最近的分段
         onPanResponderRelease: () => {
           position.stopAnimation((val) => {
             const nextIndex: SegmentedValue =
@@ -131,6 +159,7 @@ function LedgerTypeSegmented({
             goTo(nextIndex);
           });
         },
+        // 手势被中断时恢复到当前值
         onPanResponderTerminate: () => {
           goTo(value);
         },
@@ -143,6 +172,7 @@ function LedgerTypeSegmented({
       style={[styles.segmented, { width: segmentedWidth }]}
       {...panResponder.panHandlers}
     >
+      {/* 滑动指示器 */}
       <Animated.View
         pointerEvents="none"
         style={[
@@ -189,25 +219,34 @@ function LedgerTypeSegmented({
 }
 
 export default function LedgerTab() {
+  // 分段选择器的当前值：0-支出, 1-收入, 2-换汇
   const [selected, setSelected] = useState<SegmentedValue>(0);
+  // 选中的图标分类
   const [selectedTile, setSelectedTile] = useState<IconTilePickerValue>(0);
+  // 币种代码
   const [currencyCode, setCurrencyCode] = useState("USD");
+  // 允许的币种代码列表
   const [allowedCurrencyCodes, setAllowedCurrencyCodes] = useState<string[]>([
     "USD",
   ]);
   const currencyTouchedRef = useRef(false);
   const currencyCodeRef = useRef(currencyCode);
+  // 金额输入
   const [amount, setAmount] = useState("");
 
   // 换汇模式的第二个货币输入
   const [currencyCode2, setCurrencyCode2] = useState("USD");
   const [amount2, setAmount2] = useState("");
 
+  // 描述字段
   const [description, setDescription] = useState("");
   const [descriptionFocused, setDescriptionFocused] = useState(false);
+  // 键盘高度（用于调整布局）
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  // 是否正在提交
   const [submitting, setSubmitting] = useState(false);
 
+  // 日期时间状态（初始化为当前时间）
   const now = useMemo(() => new Date(), []);
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
@@ -215,6 +254,7 @@ export default function LedgerTab() {
   const [hour, setHour] = useState(now.getHours());
   const [minute, setMinute] = useState(now.getMinutes());
 
+  // 监听键盘显示/隐藏事件
   useEffect(() => {
     const showSub = Keyboard.addListener("keyboardDidShow", (e) => {
       setKeyboardHeight(e.endCoordinates?.height ?? 0);
@@ -233,9 +273,11 @@ export default function LedgerTab() {
     currencyCodeRef.current = currencyCode;
   }, [currencyCode]);
 
+  // 从设置中加载允许的币种列表
   useEffect(() => {
     let cancelled = false;
 
+    // 应用设置到组件状态
     const applyFromSettings = (s: Awaited<ReturnType<typeof getSettings>>) => {
       const nextCodes =
         s.bookkeepingCurrencyCodes && s.bookkeepingCurrencyCodes.length > 0
@@ -272,18 +314,21 @@ export default function LedgerTab() {
     };
   }, []);
 
+  // 解析第一个金额为数字
   const amountNumber = useMemo(() => {
     const normalized = amount.replace(/,/g, "").trim();
     const n = Number.parseFloat(normalized);
     return Number.isFinite(n) ? n : NaN;
   }, [amount]);
 
+  // 解析第二个金额为数字（换汇模式）
   const amountNumber2 = useMemo(() => {
     const normalized = amount2.replace(/,/g, "").trim();
     const n = Number.parseFloat(normalized);
     return Number.isFinite(n) ? n : NaN;
   }, [amount2]);
 
+  // 判断是否可以提交
   const canSubmit = useMemo(() => {
     if (submitting) return false;
     if (selected === 2) {
@@ -297,6 +342,7 @@ export default function LedgerTab() {
     return true;
   }, [amountNumber, amountNumber2, submitting, selected]);
 
+  // 提交记录（支出 / 收入 / 换汇）
   const onSubmit = useCallback(async () => {
     if (selected === 2) {
       // 换汇模式
@@ -407,6 +453,7 @@ export default function LedgerTab() {
       <LedgerTypeSegmented value={selected} onChange={setSelected} />
       <View style={styles.divider} />
 
+      {/* 金额与币种输入 */}
       <CurrencyAmountInput
         currencyCode={currencyCode}
         onCurrencyChange={(next) => {
@@ -438,11 +485,13 @@ export default function LedgerTab() {
       <View style={[styles.divider, styles.dividerNoTopMargin]} />
       {selected !== 2 ? (
         <>
+          {/* 分类选择（非换汇） */}
           <Text style={styles.categoryLabel}>Select Category</Text>
           <IconTilePicker value={selectedTile} onChange={setSelectedTile} />
           <View style={[styles.divider, styles.dividerNoTopMargin]} />
         </>
       ) : null}
+      {/* 日期时间选择 */}
       <Text style={styles.categoryLabel}>Select Date</Text>
       <DateTimePicker
         year={year}
@@ -458,6 +507,7 @@ export default function LedgerTab() {
       />
       <View style={[styles.divider, styles.dividerNoTopMargin]} />
 
+      {/* 备注输入 */}
       <Text style={styles.categoryLabel}>Description</Text>
       <View style={styles.descriptionContainer}>
         <TextInput
