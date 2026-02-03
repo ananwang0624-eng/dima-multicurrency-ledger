@@ -308,7 +308,7 @@ function generateSeededTestTransactions(
         currency,
         category,
         date: dateLocal.toISOString(),
-        description: `Seed: ${currency} ${type}`,
+        description: `${currency} ${type}`,
         type,
       });
     }
