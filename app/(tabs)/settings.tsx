@@ -129,12 +129,6 @@ export default function SettingsTab() {
         </TouchableOpacity>
       </View>
 
-      <Link href="/test" asChild>
-        <TouchableOpacity style={styles.button}>
-          <Text style={styles.buttonText}>Test - Add Transaction</Text>
-        </TouchableOpacity>
-      </Link>
-
       <TouchableOpacity style={styles.dangerButton} onPress={handleClearAll}>
         <Text style={styles.dangerButtonText}>Clear All Records</Text>
       </TouchableOpacity>
@@ -147,39 +141,6 @@ export default function SettingsTab() {
           Generate Fixed Test Data (10 records)
         </Text>
       </TouchableOpacity>
-
-      <View style={styles.latestSection}>
-        <Text style={styles.latestTitle}>Latest Record</Text>
-        {latest ? (
-          <View>
-            <Text style={styles.latestLine} numberOfLines={2}>
-              uuid: {latest.uuid}
-            </Text>
-            <Text style={styles.latestLine} numberOfLines={2}>
-              amount: {latest.amount}
-            </Text>
-            <Text style={styles.latestLine} numberOfLines={2}>
-              currency: {latest.currency}
-            </Text>
-            <Text style={styles.latestLine} numberOfLines={2}>
-              category: {latest.category}
-            </Text>
-            <Text style={styles.latestLine} numberOfLines={2}>
-              date: {latest.date}
-            </Text>
-            <Text style={styles.latestLine} numberOfLines={2}>
-              type: {latest.type}
-            </Text>
-            {latest.description ? (
-              <Text style={styles.latestLine} numberOfLines={2}>
-                description: {latest.description}
-              </Text>
-            ) : null}
-          </View>
-        ) : (
-          <Text style={styles.latestEmpty}>No records</Text>
-        )}
-      </View>
 
       <Modal
         visible={currencyPickerOpen}
