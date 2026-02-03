@@ -36,6 +36,18 @@ export default function RootLayout() {
           }}
         />
         <Stack.Screen
+          name="set-default-currency"
+          options={{
+            headerShown: true,
+            title: "Default Currency",
+            headerStyle: {
+              backgroundColor: "rgb(128, 75, 56)",
+            },
+            headerTintColor: "#fff",
+            headerBackButtonDisplayMode: "minimal",
+          }}
+        />
+        <Stack.Screen
           name="settings-submenu-example"
           options={{
             headerShown: true,
