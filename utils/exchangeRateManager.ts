@@ -31,7 +31,23 @@ export function getMonthlyRateLevel(
   const latestRate = data.rates[latest];
   const idx = sorted.findIndex((r) => r >= latestRate);
   const pos = idx === -1 ? sorted.length : idx + 1;
-  const level = Math.ceil((pos / sorted.length) * 5);
+  let level = Math.ceil((pos / sorted.length) * 5);
+
+  // 动量修正：结合波动情况优化建议
+  const weeklyFluctuation = getWeeklyFluctuationPercentage(data);
+  const MOMENTUM_THRESHOLD = 0.5; // 0.5% 的周波动视为显著趋势
+
+  if (weeklyFluctuation !== null) {
+    // 情况1：处于低位(Buy建议区)，但依然在剧烈下跌 -> 风险大，暂缓买入
+    if (level <= 2 && weeklyFluctuation < -MOMENTUM_THRESHOLD) {
+      level = Math.min(level + 1, 3);
+    }
+    // 情况2：处于高位(Sell建议区)，但依然在剧烈上涨 -> 潜力在，暂缓卖出
+    else if (level >= 4 && weeklyFluctuation > MOMENTUM_THRESHOLD) {
+      level = Math.max(level - 1, 3);
+    }
+  }
+
   return Math.min(Math.max(level, 1), 5);
 }
 
@@ -58,7 +74,24 @@ export function getYearlyRateLevel(
   const latestRate = data.rates[latest];
   const idx = sorted.findIndex((r) => r >= latestRate);
   const pos = idx === -1 ? sorted.length : idx + 1;
-  const level = Math.ceil((pos / sorted.length) * 5);
+  let level = Math.ceil((pos / sorted.length) * 5);
+
+  // 动量修正：结合波动情况优化建议
+  // 年评级参考月波动
+  const monthlyFluctuation = getMonthlyFluctuationPercentage(data);
+  const MOMENTUM_THRESHOLD = 1.0; // 1.0% 的月波动视为显著趋势
+
+  if (monthlyFluctuation !== null) {
+    // 情况1：处于低位(Buy建议区)，但依然在剧烈下跌 -> 风险大，暂缓买入
+    if (level <= 2 && monthlyFluctuation < -MOMENTUM_THRESHOLD) {
+      level = Math.min(level + 1, 3);
+    }
+    // 情况2：处于高位(Sell建议区)，但依然在剧烈上涨 -> 潜力在，暂缓卖出
+    else if (level >= 4 && monthlyFluctuation > MOMENTUM_THRESHOLD) {
+      level = Math.max(level - 1, 3);
+    }
+  }
+
   return Math.min(Math.max(level, 1), 5);
 }
 
