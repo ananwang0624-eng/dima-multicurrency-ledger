@@ -4,6 +4,7 @@
  */
 import { StyleSheet, Text, View } from "react-native";
 import BarChart from "./BarChart";
+import { getCurrencyByCode } from "@/data/currencies";
 
 // 主题色彩常量
 const BG_COLOR = "rgb(253, 247, 245)";
@@ -39,6 +40,8 @@ export default function ExchangeRateCard({
   historicalLabels,
   fluctuationPercentage,
 }: ExchangeRateCardProps) {
+  const baseCurrencySymbol = getCurrencyByCode(baseCurrency)?.symbol || "";
+
   // 根据趋势渲染箭头
   const renderTrendArrow = () => {
     if (trend === "up") {
@@ -86,7 +89,7 @@ export default function ExchangeRateCard({
       <View style={styles.row}>
         <View style={styles.leftSection}>
           <Text style={styles.title}>
-            {baseCurrency}/{targetCurrency}
+            {baseCurrencySymbol} {baseCurrency}/{targetCurrency}
           </Text>
           <Text style={styles.rateValue}>
             {currentRate > 0 ? currentRate.toFixed(4) : "-"}

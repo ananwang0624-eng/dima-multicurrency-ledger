@@ -141,7 +141,7 @@ export default function ExchangeTab() {
 
         <View style={{ flex: 1 }}>
           <OptionPicker
-            label="Level Range"
+            label="Rating Range"
             value={levelPeriod}
             options={["monthly", "yearly"] as const}
             formatOption={(v) => (v === "monthly" ? "Month" : "Year")}
