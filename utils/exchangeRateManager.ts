@@ -61,78 +61,181 @@ export function getYearlyRateLevel(
   const level = Math.ceil((pos / sorted.length) * 5);
   return Math.min(Math.max(level, 1), 5);
 }
+
 /**
- * 判断以天为单位，最新汇率是升高还是降低
- * 返回 'up' | 'down' | 'flat' | 'insufficient-data'
+ * 计算当前汇率比上一天的波动比例（百分比）
+ * @returns number (如 1.20) 或 null
  */
-export function getDailyTrend(
+export function getDailyFluctuationPercentage(
   data: ExchangeRateData,
-): "up" | "down" | "flat" | "insufficient-data" {
+): number | null {
   const dates = Object.keys(data.rates).sort();
-  if (dates.length < 2) return "insufficient-data";
+  if (dates.length < 2) return null;
   const latest = dates[dates.length - 1];
   const prev = dates[dates.length - 2];
   const latestRate = data.rates[latest];
   const prevRate = data.rates[prev];
-  if (latestRate > prevRate) return "up";
-  if (latestRate < prevRate) return "down";
-  return "flat";
+
+  if (prevRate === 0) return null; // 避免除以零
+
+  const percentage = ((latestRate - prevRate) / prevRate) * 100;
+  return percentage;
 }
 
 /**
- * 判断以周为单位，最新汇率是升高还是降低
- * 返回 'up' | 'down' | 'flat' | 'insufficient-data'
+ * 计算当前周的平均汇率比上一周的平均汇率的波动比例（百分比）
+ * @returns number (如 1.20) 或 null
  */
-export function getWeeklyTrend(
+export function getWeeklyFluctuationPercentage(
   data: ExchangeRateData,
-): "up" | "down" | "flat" | "insufficient-data" {
+): number | null {
   const dates = Object.keys(data.rates).sort();
-  if (dates.length < 8) return "insufficient-data";
-  const latest = dates[dates.length - 1];
-  // 找到一周前的日期
-  const latestDate = new Date(latest);
-  let weekAgoDateStr = "";
-  for (let i = dates.length - 2; i >= 0; i--) {
-    const d = new Date(dates[i]);
-    if (latestDate.getTime() - d.getTime() >= 6 * 24 * 60 * 60 * 1000) {
-      weekAgoDateStr = dates[i];
-      break;
-    }
-  }
-  if (!weekAgoDateStr) return "insufficient-data";
-  const latestRate = data.rates[latest];
-  const weekAgoRate = data.rates[weekAgoDateStr];
-  if (latestRate > weekAgoRate) return "up";
-  if (latestRate < weekAgoRate) return "down";
-  return "flat";
+  const daysPerWeek = 5;
+  // 需要至少两周的数据
+  if (dates.length < daysPerWeek * 2) return null;
+
+  // 获取当前周（最后5天）的日期
+  const currentWeekDates = dates.slice(-daysPerWeek);
+  // 获取上一周（倒数第10天到倒数第5天）的日期
+  const prevWeekDates = dates.slice(-daysPerWeek * 2, -daysPerWeek);
+
+  // 计算当前周平均汇率
+  const currentWeekSum = currentWeekDates.reduce(
+    (acc, date) => acc + data.rates[date],
+    0,
+  );
+  const currentWeekAvg = currentWeekSum / currentWeekDates.length;
+
+  // 计算上一周平均汇率
+  const prevWeekSum = prevWeekDates.reduce(
+    (acc, date) => acc + data.rates[date],
+    0,
+  );
+  const prevWeekAvg = prevWeekSum / prevWeekDates.length;
+
+  if (prevWeekAvg === 0) return null;
+
+  const percentage = ((currentWeekAvg - prevWeekAvg) / prevWeekAvg) * 100;
+  return percentage;
 }
 
 /**
- * 判断以月为单位，最新汇率是升高还是降低
- * 返回 'up' | 'down' | 'flat' | 'insufficient-data'
+ * 计算当前月的平均汇率比上一月的平均汇率的波动比例（百分比）
+ * @returns number (如 1.20) 或 null
  */
-export function getMonthlyTrend(
+export function getMonthlyFluctuationPercentage(
   data: ExchangeRateData,
-): "up" | "down" | "flat" | "insufficient-data" {
+): number | null {
   const dates = Object.keys(data.rates).sort();
-  if (dates.length < 2) return "insufficient-data";
-  const latest = dates[dates.length - 1];
-  const latestDate = new Date(latest);
-  let monthAgoDateStr = "";
-  for (let i = 0; i < dates.length - 1; i++) {
-    const d = new Date(dates[i]);
-    if (latestDate.getTime() - d.getTime() >= 30 * 24 * 60 * 60 * 1000) {
-      monthAgoDateStr = dates[i];
-      break;
-    }
-  }
-  if (!monthAgoDateStr) return "insufficient-data";
-  const latestRate = data.rates[latest];
-  const monthAgoRate = data.rates[monthAgoDateStr];
-  if (latestRate > monthAgoRate) return "up";
-  if (latestRate < monthAgoRate) return "down";
-  return "flat";
+  const daysPerMonth = 22;
+  // 需要至少两个月的数据
+  if (dates.length < daysPerMonth * 2) return null;
+
+  // 获取当前月（最后22天）的日期
+  const currentMonthDates = dates.slice(-daysPerMonth);
+  // 获取上一月（倒数第44天到倒数第22天）的日期
+  const prevMonthDates = dates.slice(-daysPerMonth * 2, -daysPerMonth);
+
+  // 计算当前月平均汇率
+  const currentMonthSum = currentMonthDates.reduce(
+    (acc, date) => acc + data.rates[date],
+    0,
+  );
+  const currentMonthAvg = currentMonthSum / currentMonthDates.length;
+
+  // 计算上一月平均汇率
+  const prevMonthSum = prevMonthDates.reduce(
+    (acc, date) => acc + data.rates[date],
+    0,
+  );
+  const prevMonthAvg = prevMonthSum / prevMonthDates.length;
+
+  if (prevMonthAvg === 0) return null;
+
+  const percentage = ((currentMonthAvg - prevMonthAvg) / prevMonthAvg) * 100;
+  return percentage;
 }
+
+/**
+ * 获取过去7周的平均汇率数据 (每周按5个交易日计算)
+ * @param data 汇率数据对象
+ * @returns rates (汇率数组) 和 labels (日期标签)
+ */
+export function getLast7WeeksAverageData(data: ExchangeRateData): {
+  rates: number[];
+  labels: string[];
+} {
+  const dates = Object.keys(data.rates).sort();
+  const rates: number[] = [];
+  const labels: string[] = [];
+  const daysPerWeek = 5;
+
+  let endIndex = dates.length;
+
+  for (let i = 0; i < 7; i++) {
+    const startIndex = Math.max(0, endIndex - daysPerWeek);
+    // 取一段数据 (startIndex 到 endIndex)
+    const chunkDates = dates.slice(startIndex, endIndex);
+
+    if (chunkDates.length === 0) {
+      rates.unshift(0);
+      labels.unshift("");
+    } else {
+      // 计算平均值
+      const sum = chunkDates.reduce((acc, date) => acc + data.rates[date], 0);
+      const avg = sum / chunkDates.length;
+      rates.unshift(avg);
+
+      // 使用该周最后一个日期作为标签
+      const lastDate = new Date(chunkDates[chunkDates.length - 1]);
+      labels.unshift(`${lastDate.getMonth() + 1}/${lastDate.getDate()}`);
+    }
+
+    endIndex = startIndex;
+  }
+
+  return { rates, labels };
+}
+
+/**
+ * 获取过去7个月的平均汇率数据 (每月按22个交易日计算)
+ * @param data 汇率数据对象
+ * @returns rates (汇率数组) 和 labels (日期标签)
+ */
+export function getLast7MonthsAverageData(data: ExchangeRateData): {
+  rates: number[];
+  labels: string[];
+} {
+  const dates = Object.keys(data.rates).sort();
+  const rates: number[] = [];
+  const labels: string[] = [];
+  const daysPerMonth = 22;
+
+  let endIndex = dates.length;
+
+  for (let i = 0; i < 7; i++) {
+    const startIndex = Math.max(0, endIndex - daysPerMonth);
+    const chunkDates = dates.slice(startIndex, endIndex);
+
+    if (chunkDates.length === 0) {
+      rates.unshift(0);
+      labels.unshift("");
+    } else {
+      const sum = chunkDates.reduce((acc, date) => acc + data.rates[date], 0);
+      const avg = sum / chunkDates.length;
+      rates.unshift(avg);
+
+      const lastDate = new Date(chunkDates[chunkDates.length - 1]);
+      labels.unshift(`${lastDate.getMonth() + 1}/${lastDate.getDate()}`);
+    }
+
+    endIndex = startIndex;
+  }
+
+  return { rates, labels };
+}
+
+
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // 使用 Frankfurter API（免费、无需 API key、支持历史数据）

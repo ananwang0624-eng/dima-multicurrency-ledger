@@ -7,11 +7,13 @@ import { getSettings, subscribeSettings } from "@/utils/settingsManager";
 import {
   ensureExchangeRates,
   getStoredExchangeRates,
-  getDailyTrend,
-  getWeeklyTrend,
-  getMonthlyTrend,
   getMonthlyRateLevel,
   getYearlyRateLevel,
+  getDailyFluctuationPercentage,
+  getWeeklyFluctuationPercentage,
+  getMonthlyFluctuationPercentage,
+  getLast7WeeksAverageData,
+  getLast7MonthsAverageData,
   type ExchangeRateData,
 } from "@/utils/exchangeRateManager";
 import { useEffect, useState, useCallback } from "react";
@@ -24,6 +26,31 @@ import {
 } from "react-native";
 import ExchangeRateCard from "@/components/ExchangeRateCard";
 import { OptionPicker } from "@/components/OptionPicker";
+
+/**
+ * 从汇率数据中提取最近7天的汇率值和日期标签
+ */
+function getLastSevenDaysData(data: ExchangeRateData): {
+  rates: number[];
+  labels: string[];
+} {
+  const dates = Object.keys(data.rates).sort();
+  const last7Dates = dates.slice(-7);
+
+  const rates = last7Dates.map((date) => data.rates[date]);
+  const labels = last7Dates.map((date) => {
+    const d = new Date(date);
+    return `${d.getMonth() + 1}/${d.getDate()}`;
+  });
+
+  // 如果不足7天，用0填充
+  while (rates.length < 7) {
+    rates.unshift(0);
+    labels.unshift("");
+  }
+
+  return { rates, labels };
+}
 
 export default function ExchangeTab() {
   const [exchangeRateData, setExchangeRateData] = useState<ExchangeRateData[]>(
@@ -94,9 +121,6 @@ export default function ExchangeTab() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Exchange Rates</Text>
-      <Text style={styles.subtitle}>Exchange rate data summary</Text>
-
       <View style={{ height: 16 }} />
 
       {/* 趋势与水平区间选择 */}
@@ -147,14 +171,25 @@ export default function ExchangeTab() {
             const latestDate = dates[dates.length - 1];
             const currentRate = latestDate ? data.rates[latestDate] : 0;
 
-            // Calculate trend based on selected time range
+            // Calculate trend and fluctuation based on selected time range
             let trend: "up" | "down" | "flat" | "insufficient-data";
+            let fluctuationPercentage: number | null = null;
+
             if (trendPeriod === "daily") {
-              trend = getDailyTrend(data);
+              fluctuationPercentage = getDailyFluctuationPercentage(data);
             } else if (trendPeriod === "weekly") {
-              trend = getWeeklyTrend(data);
+              fluctuationPercentage = getWeeklyFluctuationPercentage(data);
             } else {
-              trend = getMonthlyTrend(data);
+              fluctuationPercentage = getMonthlyFluctuationPercentage(data);
+            }
+
+            // Determine trend based on fluctuation
+            if (fluctuationPercentage !== null) {
+              if (fluctuationPercentage > 0) trend = "up";
+              else if (fluctuationPercentage < 0) trend = "down";
+              else trend = "flat";
+            } else {
+              trend = "insufficient-data";
             }
 
             // Calculate level based on selected time range
@@ -162,6 +197,25 @@ export default function ExchangeTab() {
               levelPeriod === "monthly"
                 ? getMonthlyRateLevel(data)
                 : getYearlyRateLevel(data);
+
+            // Get historical data for chart based on trend period
+            let historicalRates: number[];
+            let historicalLabels: string[];
+
+            if (trendPeriod === "weekly") {
+              const data7Weeks = getLast7WeeksAverageData(data);
+              historicalRates = data7Weeks.rates;
+              historicalLabels = data7Weeks.labels;
+            } else if (trendPeriod === "monthly") {
+              const data7Months = getLast7MonthsAverageData(data);
+              historicalRates = data7Months.rates;
+              historicalLabels = data7Months.labels;
+            } else {
+              // Default to daily (last 7 days)
+              const data7Days = getLastSevenDaysData(data);
+              historicalRates = data7Days.rates;
+              historicalLabels = data7Days.labels;
+            }
 
             return (
               <ExchangeRateCard
@@ -171,6 +225,9 @@ export default function ExchangeTab() {
                 currentRate={currentRate}
                 trend={trend}
                 level={level}
+                historicalRates={historicalRates}
+                historicalLabels={historicalLabels}
+                fluctuationPercentage={fluctuationPercentage}
               />
             );
           })}
