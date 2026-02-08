@@ -69,40 +69,60 @@ export default function ExchangeTab() {
     "monthly",
   );
 
-  // 加载并聚合汇率数据
+  // 从本地缓存读取已有汇率数据（同步快速，不发网络请求）
+  const loadCachedRates = useCallback(async () => {
+    const settings = await getSettings();
+    const targetCurrency = settings.defaultCurrencyCode;
+    const bookkeepingCurrencies = settings.bookkeepingCurrencyCodes;
+
+    const cachedList = (
+      await Promise.all(
+        bookkeepingCurrencies.map((baseCurrency) =>
+          getStoredExchangeRates(baseCurrency, targetCurrency),
+        ),
+      )
+    ).filter(
+      (data): data is ExchangeRateData =>
+        data !== null && Object.keys(data.rates).length > 0,
+    );
+
+    return cachedList;
+  }, []);
+
+  // 加载并聚合汇率数据：先展示缓存，再后台刷新
   const loadExchangeRates = useCallback(async () => {
     try {
-      setIsLoadingRates(true);
       setRatesError(null);
 
+      // 第一步：立即用缓存数据渲染，避免闪烁
+      const cached = await loadCachedRates();
+      if (cached.length > 0) {
+        setExchangeRateData(cached);
+        setIsLoadingRates(false);
+      }
+      // 无缓存时保持 loading 状态
+
+      // 第二步：后台确保汇率最新（可能发网络请求）
       const settings = await getSettings();
       const targetCurrency = settings.defaultCurrencyCode;
       const bookkeepingCurrencies = settings.bookkeepingCurrencyCodes;
 
-      const dataList: ExchangeRateData[] = [];
+      await Promise.all(
+        bookkeepingCurrencies.map((baseCurrency) =>
+          ensureExchangeRates(baseCurrency, targetCurrency),
+        ),
+      );
 
-      // 为每个记账币种加载汇率
-      for (const baseCurrency of bookkeepingCurrencies) {
-        await ensureExchangeRates(baseCurrency, targetCurrency);
-        const data = await getStoredExchangeRates(baseCurrency, targetCurrency);
-        if (data && Object.keys(data.rates).length > 0) {
-          dataList.push(data);
-        }
-      }
-
-      setExchangeRateData(dataList);
+      // 第三步：重新读取最新数据并更新 UI
+      const freshList = await loadCachedRates();
+      setExchangeRateData(freshList);
     } catch (error) {
       console.error("Failed to load exchange rates:", error);
       setRatesError(error instanceof Error ? error.message : "Unknown error");
     } finally {
       setIsLoadingRates(false);
     }
-  }, []);
-
-  // 组件加载时初始化汇率
-  useEffect(() => {
-    loadExchangeRates();
-  }, [loadExchangeRates]);
+  }, [loadCachedRates]);
 
   // 监听设置变化并刷新
   useEffect(() => {

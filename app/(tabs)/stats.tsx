@@ -15,9 +15,9 @@ import {
 import { getSettings, subscribeSettings } from "@/utils/settingsManager";
 import {
   ensureExchangeRates,
+  getStoredExchangeRates,
   type ExchangeRateData,
 } from "@/utils/exchangeRateManager";
-import { CURRENCIES } from "@/data/currencies";
 
 type TransactionType = "income" | "expense";
 
@@ -54,45 +54,82 @@ export default function StatsTab() {
     return unsubscribe;
   }, [refreshTransactions]);
 
+  // 从交易记录中提取涉及的币种（排除默认币种）
+  const neededCurrencies = useMemo(() => {
+    const set = new Set<string>();
+    for (const t of transactions) {
+      if (t.currency !== defaultCurrency) {
+        set.add(t.currency);
+      }
+    }
+    return Array.from(set);
+  }, [transactions, defaultCurrency]);
+
   // 加载设置与汇率（用于统一币种展示）
   useEffect(() => {
     const loadSettingsAndRates = async () => {
       const settings = await getSettings();
       setDefaultCurrency(settings.defaultCurrencyCode);
-
-      // 获取所有需要的汇率
-      const ratesMap = new Map<string, ExchangeRateData>();
-      for (const currency of CURRENCIES) {
-        if (currency.code !== settings.defaultCurrencyCode) {
-          try {
-            const rateData = await ensureExchangeRates(
-              currency.code,
-              settings.defaultCurrencyCode,
-            );
-            ratesMap.set(
-              `${currency.code}-${settings.defaultCurrencyCode}`,
-              rateData,
-            );
-          } catch (error) {
-            console.error(
-              `Failed to load exchange rate for ${currency.code}:`,
-              error,
-            );
-          }
-        }
-      }
-      setExchangeRates(ratesMap);
     };
 
     loadSettingsAndRates();
 
     const unsubscribeSettings = subscribeSettings((settings) => {
       setDefaultCurrency(settings.defaultCurrencyCode);
-      loadSettingsAndRates();
     });
 
     return unsubscribeSettings;
   }, []);
+
+  // 当需要的币种变化时，加载对应汇率：优先用缓存，后台刷新
+  useEffect(() => {
+    if (neededCurrencies.length === 0) {
+      setExchangeRates(new Map());
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadRates = async () => {
+      const ratesMap = new Map<string, ExchangeRateData>();
+
+      // 第一步：立即用本地缓存渲染
+      const cachedResults = await Promise.all(
+        neededCurrencies.map(async (code) => {
+          const cached = await getStoredExchangeRates(code, defaultCurrency);
+          return { code, data: cached };
+        }),
+      );
+      for (const { code, data } of cachedResults) {
+        if (data && Object.keys(data.rates).length > 0) {
+          ratesMap.set(`${code}-${defaultCurrency}`, data);
+        }
+      }
+      if (!cancelled) setExchangeRates(new Map(ratesMap));
+
+      // 第二步：后台并行确保最新
+      await Promise.all(
+        neededCurrencies.map(async (code) => {
+          try {
+            await ensureExchangeRates(code, defaultCurrency);
+            const fresh = await getStoredExchangeRates(code, defaultCurrency);
+            if (fresh && Object.keys(fresh.rates).length > 0) {
+              ratesMap.set(`${code}-${defaultCurrency}`, fresh);
+            }
+          } catch (error) {
+            console.error(`Failed to load exchange rate for ${code}:`, error);
+          }
+        }),
+      );
+      if (!cancelled) setExchangeRates(new Map(ratesMap));
+    };
+
+    loadRates();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [neededCurrencies, defaultCurrency]);
 
   return (
     <ScrollView style={styles.container}>
