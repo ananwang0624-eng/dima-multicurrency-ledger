@@ -154,7 +154,6 @@ function WheelPicker({
 export function MonthYearPicker({
   year,
   month,
-  recordCount,
   onYearChange,
   onMonthChange,
   minYear = 2000,
@@ -163,7 +162,6 @@ export function MonthYearPicker({
 }: {
   year: number;
   month: number;
-  recordCount: number;
   onYearChange: (next: number) => void;
   onMonthChange: (next: number) => void;
   minYear?: number;
@@ -237,8 +235,6 @@ export function MonthYearPicker({
 
           <Text style={styles.separator}></Text>
         </View>
-
-        {/* <Text style={styles.count}>({recordCount} records)</Text> */}
       </View>
 
       <Modal

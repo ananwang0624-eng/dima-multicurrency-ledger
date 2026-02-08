@@ -220,21 +220,17 @@ export default function ExchangeTab() {
 
             // Get historical data for chart based on trend period
             let historicalRates: number[];
-            let historicalLabels: string[];
 
             if (trendPeriod === "weekly") {
               const data7Weeks = getLast7WeeksAverageData(data);
               historicalRates = data7Weeks.rates;
-              historicalLabels = data7Weeks.labels;
             } else if (trendPeriod === "monthly") {
               const data7Months = getLast7MonthsAverageData(data);
               historicalRates = data7Months.rates;
-              historicalLabels = data7Months.labels;
             } else {
               // Default to daily (last 7 days)
               const data7Days = getLastSevenDaysData(data);
               historicalRates = data7Days.rates;
-              historicalLabels = data7Days.labels;
             }
 
             return (
@@ -246,7 +242,6 @@ export default function ExchangeTab() {
                 trend={trend}
                 level={level}
                 historicalRates={historicalRates}
-                historicalLabels={historicalLabels}
                 fluctuationPercentage={fluctuationPercentage}
               />
             );

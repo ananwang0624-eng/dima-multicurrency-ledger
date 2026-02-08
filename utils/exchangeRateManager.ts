@@ -482,30 +482,6 @@ export async function ensureExchangeRates(
 }
 
 /**
- * 获取汇率数据的摘要信息
- * @param data 汇率数据对象
- * @returns 汇率数据摘要或 null
- */
-export function getExchangeRateSummary(data: ExchangeRateData | null): {
-  baseCurrency: string;
-  targetCurrency: string;
-  startDate: string | null;
-  endDate: string | null;
-  count: number;
-} | null {
-  if (!data) return null;
-
-  const dates = Object.keys(data.rates).sort();
-  return {
-    baseCurrency: data.baseCurrency,
-    targetCurrency: data.targetCurrency,
-    startDate: dates.length > 0 ? dates[0] : null,
-    endDate: dates.length > 0 ? dates[dates.length - 1] : null,
-    count: dates.length,
-  };
-}
-
-/**
  * 根据日期获取汇率
  * 如果指定日期没有汇率，返回最近的可用汇率
  * @param data 汇率数据对象

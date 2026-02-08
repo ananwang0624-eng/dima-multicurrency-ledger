@@ -140,7 +140,6 @@ export default function StatsTab() {
             <MonthYearPicker
               year={selectedYear}
               month={selectedMonth}
-              recordCount={transactions.length}
               onYearChange={setSelectedYear}
               onMonthChange={setSelectedMonth}
             />

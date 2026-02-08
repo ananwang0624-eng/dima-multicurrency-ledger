@@ -56,9 +56,7 @@ export default function SettingsTab() {
         style={styles.secondaryButton}
         onPress={handleSeedTestData}
       >
-        <Text style={styles.secondaryButtonText}>
-          Generate Fixed Test Data (10 records)
-        </Text>
+        <Text style={styles.secondaryButtonText}>Generate Fixed Test Data</Text>
       </TouchableOpacity>
     </View>
   );

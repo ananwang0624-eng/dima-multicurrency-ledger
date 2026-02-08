@@ -1,4 +1,3 @@
-import React from "react";
 import { View, StyleSheet } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 
@@ -8,8 +7,6 @@ interface BarChartProps {
   barColor?: string;
   gradientToColor?: string;
   backgroundColor?: string;
-  showValues?: boolean;
-  labels?: string[];
 }
 
 export default function BarChart({

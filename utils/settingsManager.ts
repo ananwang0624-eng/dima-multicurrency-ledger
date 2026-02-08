@@ -80,9 +80,6 @@ function normalizeSettings(raw: unknown): AppSettings {
     bookkeepingCurrencyCodes: resolvedBookkeepingCurrencyCodes,
   };
 
-  // Backward compatibility: version 1 settings did not have bookkeeping fields.
-  // Unknown versions are normalized best-effort.
-  if (version === 1 || version === 2) return normalized;
   return normalized;
 }
 
@@ -129,16 +126,6 @@ export async function getSettings(): Promise<AppSettings> {
 }
 
 /**
- * 设置应用设置（完全替换）
- * @param next 新的设置对象
- */
-export async function setSettings(next: AppSettings): Promise<void> {
-  const normalized = normalizeSettings(next);
-  await AsyncStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(normalized));
-  emit(normalized);
-}
-
-/**
  * 更新部分设置（合并更新）
  * @param patch 要更新的设置字段
  * @returns 更新后的设置
@@ -172,29 +159,6 @@ export async function setDefaultCurrencyCode(
     ? code
     : (CURRENCIES[0]?.code ?? "USD");
   return updateSettings({ defaultCurrencyCode: resolved });
-}
-
-/**
- * 设置记账币种（并添加到启用列表）
- * @param code 币种代码
- * @returns 更新后的设置
- */
-export async function setBookkeepingCurrencyCode(
-  code: string,
-): Promise<AppSettings> {
-  const resolved = getCurrencyByCode(code)
-    ? code.toUpperCase()
-    : (CURRENCIES[0]?.code ?? "USD");
-
-  const current = await getSettings();
-  const nextCodes = Array.from(
-    new Set([...(current.bookkeepingCurrencyCodes ?? []), resolved]),
-  );
-
-  return updateSettings({
-    bookkeepingCurrencyCodes: nextCodes,
-    bookkeepingCurrencyCode: resolved,
-  });
 }
 
 /**

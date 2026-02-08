@@ -218,27 +218,13 @@ function normalizeBookkeepingFile(raw: unknown): BookkeepingFile {
   // v2 (current)
   if (record.version === 2) {
     const transactionsByMonthRaw = record.transactionsByMonth;
-    const balancesRaw = record.balances;
 
     const transactionsByMonth: BookkeepingData =
       transactionsByMonthRaw && typeof transactionsByMonthRaw === "object"
         ? (transactionsByMonthRaw as BookkeepingData)
         : {};
 
-    const computed = computeBalances(transactionsByMonth);
-
-    const balances: BalancesByCurrency =
-      balancesRaw && typeof balancesRaw === "object"
-        ? ({
-            ...computed,
-            ...(balancesRaw as BalancesByCurrency),
-          } as BalancesByCurrency)
-        : computed;
-
-    // Sanitize numeric values.
-    for (const [code, val] of Object.entries(balances)) {
-      balances[code] = Number.isFinite(val) ? Number(val) : 0;
-    }
+    const balances = computeBalances(transactionsByMonth);
 
     return {
       version: 2,
@@ -364,10 +350,6 @@ export async function clearAllTransactions(): Promise<void> {
 
 /**
  * 生成确定性的测试交易记录用于手动测试
- * - 范围：最近约 1 个月（近 30 天，包括今天）
- * - 密度：每天 5 条记录
- * - 币种：仅 CNY / EUR
- * - 分类：随机 0-7
  * 幂等性：插入前会移除现有的种子 UUID
  */
 export async function seedDeterministicTestTransactions(): Promise<void> {
@@ -375,7 +357,6 @@ export async function seedDeterministicTestTransactions(): Promise<void> {
 
   const seededTransactions = generateSeededTestTransactions();
 
-  // Validate seed data so we fail fast if currencies/categories/dates change.
   for (const record of seededTransactions) {
     validateTransactionRecord(record);
   }
@@ -383,7 +364,6 @@ export async function seedDeterministicTestTransactions(): Promise<void> {
   const file = await readBookkeepingFile();
   const data = file.transactionsByMonth;
 
-  // Remove any previous seed entries to keep seeding repeatable.
   for (const key of Object.keys(data)) {
     data[key] = (data[key] || []).filter((t) => !t.uuid.startsWith("seed-"));
   }
@@ -471,35 +451,6 @@ export async function getTransactionsByMonth(
 }
 
 /**
- * 获取所有月份的交易记录
- * @returns 按日期排序（降序）的所有交易记录数组
- */
-export async function getAllTransactions(): Promise<TransactionRecord[]> {
-  const file = await readBookkeepingFile();
-  const allTransactions: TransactionRecord[] = [];
-
-  for (const records of Object.values(file.transactionsByMonth)) {
-    allTransactions.push(...records);
-  }
-
-  // 按日期降序排序（最新的在前）
-  allTransactions.sort((a, b) => {
-    return new Date(b.date).getTime() - new Date(a.date).getTime();
-  });
-
-  return allTransactions;
-}
-
-/**
- * 获取所有可用的年-月键
- * @returns 按降序排序的年-月键数组
- */
-export async function getAvailableMonths(): Promise<string[]> {
-  const file = await readBookkeepingFile();
-  return Object.keys(file.transactionsByMonth).sort().reverse();
-}
-
-/**
  * 在应用启动时初始化数据文件
  * 如果文件不存在，则使用默认数据创建文件
  */
@@ -567,27 +518,6 @@ async function writeBookkeepingFile(file: BookkeepingFile): Promise<void> {
 }
 
 /**
- * 从文件读取记账数据
- * @returns 按月分组的交易记录
- */
-export async function readData(): Promise<BookkeepingData> {
-  const file = await readBookkeepingFile();
-  return file.transactionsByMonth;
-}
-
-/**
- * 将记账数据写入文件
- * @param data 要写入的记账数据
- */
-export async function writeData(data: BookkeepingData): Promise<void> {
-  await writeBookkeepingFile({
-    version: 2,
-    transactionsByMonth: data,
-    balances: computeBalances(data),
-  });
-}
-
-/**
  * 获取所有币种的余额
  * @returns 各币种的余额对象
  */
@@ -629,10 +559,3 @@ export async function setBalance(
   await writeBookkeepingFile(file);
 }
 
-/**
- * 获取数据文件的完整路径（用于调试）
- * @returns 数据文件的 URI
- */
-export function getDataFilePath(): string {
-  return dataFile.uri;
-}

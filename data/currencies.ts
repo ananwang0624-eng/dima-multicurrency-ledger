@@ -52,7 +52,7 @@ export const CURRENCIES: Currency[] = [
 /**
  * 币种代码到币种对象的映射（用于快速查找）
  */
-export const CURRENCIES_BY_CODE: Record<string, Currency> = Object.fromEntries(
+const CURRENCIES_BY_CODE: Record<string, Currency> = Object.fromEntries(
   CURRENCIES.map((currency) => [currency.code, currency]),
 );
 

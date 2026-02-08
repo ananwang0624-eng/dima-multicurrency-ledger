@@ -26,7 +26,6 @@ interface ExchangeRateCardProps {
   trend: TrendType; // 趋势类型
   level: number | "insufficient-data"; // 水平位置 (1-5)
   historicalRates?: number[]; // 最近7天的汇率数据
-  historicalLabels?: string[]; // 最近7天的日期标签
   fluctuationPercentage?: number | null; // 波动比例
 }
 
@@ -37,7 +36,6 @@ export default function ExchangeRateCard({
   trend,
   level,
   historicalRates,
-  historicalLabels,
   fluctuationPercentage,
 }: ExchangeRateCardProps) {
   const baseCurrencySymbol = getCurrencyByCode(baseCurrency)?.symbol || "";

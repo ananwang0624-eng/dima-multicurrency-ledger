@@ -64,7 +64,6 @@ export default function HomeTab() {
         <MonthYearPicker
           year={selectedYear}
           month={selectedMonth}
-          recordCount={records.length}
           onYearChange={setSelectedYear}
           onMonthChange={setSelectedMonth}
         />
