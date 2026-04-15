@@ -283,6 +283,7 @@ export type ExchangeRateData = {
   targetCurrency: string; // 目标货币（默认货币）
   rates: Record<string, number>; // 日期 (YYYY-MM-DD) -> 汇率（1 baseCurrency = X targetCurrency）
   lastUpdated: string; // ISO 8601 格式的最后更新时间
+  lastRefreshAttemptDate?: string; // 最近一次尝试刷新日期 (YYYY-MM-DD)
 };
 
 /**
@@ -423,6 +424,7 @@ export async function ensureExchangeRates(
       targetCurrency,
       rates,
       lastUpdated: new Date().toISOString(),
+      lastRefreshAttemptDate: today,
     };
 
     await saveExchangeRates(storedData);
@@ -438,6 +440,13 @@ export async function ensureExchangeRates(
   if (latestStoredDate === today) {
     console.log(
       `Exchange rates for ${baseCurrency}/${targetCurrency} are up to date`,
+    );
+    return storedData;
+  }
+
+  if (storedData.lastRefreshAttemptDate === today) {
+    console.log(
+      `Exchange rates for ${baseCurrency}/${targetCurrency} were already checked today`,
     );
     return storedData;
   }
@@ -475,6 +484,7 @@ export async function ensureExchangeRates(
     targetCurrency,
     rates: filteredRates,
     lastUpdated: new Date().toISOString(),
+    lastRefreshAttemptDate: today,
   };
 
   await saveExchangeRates(updatedData);

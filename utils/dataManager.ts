@@ -268,6 +268,33 @@ const DEFAULT_FILE: BookkeepingFile = {
   balances: createDefaultBalances(),
 };
 
+function createDefaultBookkeepingFile(): BookkeepingFile {
+  return {
+    version: 2,
+    transactionsByMonth: {},
+    balances: createDefaultBalances(),
+  };
+}
+
+function isMissingFileError(error: unknown): boolean {
+  const message =
+    error instanceof Error ? error.message : String(error ?? "");
+  return (
+    message.includes("ENOENT") ||
+    message.includes("No such file or directory") ||
+    message.includes("FileNotFoundException")
+  );
+}
+
+async function writeDefaultDataFile(): Promise<BookkeepingFile> {
+  const defaultFile = createDefaultBookkeepingFile();
+  if (!dataFile.exists) {
+    dataFile.create({ intermediates: true, overwrite: true });
+  }
+  await dataFile.write(JSON.stringify(defaultFile, null, 2));
+  return defaultFile;
+}
+
 const SEEDED_CURRENCIES = ["CNY", "EUR"] as const;
 const SEEDED_DAYS = 60;
 const SEEDED_RECORDS_PER_DAY = 5;
@@ -457,7 +484,7 @@ export async function getTransactionsByMonth(
 export async function initializeDataFile(): Promise<void> {
   try {
     if (!dataFile.exists) {
-      await dataFile.write(JSON.stringify(DEFAULT_FILE, null, 2));
+      await writeDefaultDataFile();
       console.log("✅ Data file created:", dataFile.uri);
     } else {
       // Best-effort migration: ensure schema includes balances.
@@ -490,8 +517,12 @@ async function readBookkeepingFile(): Promise<BookkeepingFile> {
     const parsed = JSON.parse(content) as unknown;
     return normalizeBookkeepingFile(parsed);
   } catch (error) {
+    if (isMissingFileError(error)) {
+      return writeDefaultDataFile();
+    }
+
     console.error("❌ Error reading data:", error);
-    return DEFAULT_FILE;
+    return createDefaultBookkeepingFile();
   }
 }
 
