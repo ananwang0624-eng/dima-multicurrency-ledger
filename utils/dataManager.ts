@@ -590,3 +590,10 @@ export async function setBalance(
   await writeBookkeepingFile(file);
 }
 
+export const __testables = {
+  computeBalances,
+  normalizeBookkeepingFile,
+  roundTo2,
+  validateTransactionRecord,
+};
+

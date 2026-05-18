@@ -211,3 +211,7 @@ export async function removeBookkeepingCurrencyCode(
     bookkeepingCurrencyCode: nextSelected,
   });
 }
+
+export const __testables = {
+  normalizeSettings,
+};
