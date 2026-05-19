@@ -2,11 +2,14 @@
  * 应用根布局组件
  * 配置全局主题、导航栈和应用启动时的初始化逻辑
  */
+import { useAppTheme, AppThemeProvider } from "@/providers/AppThemeProvider";
 import { initializeDataFile } from "@/utils/dataManager";
 import { Stack } from "expo-router";
 import { useEffect } from "react";
 
-export default function RootLayout() {
+function RootStack() {
+  const { theme } = useAppTheme();
+
   // 应用启动时初始化本地数据文件
   useEffect(() => {
     initializeDataFile().catch((error) => {
@@ -19,7 +22,7 @@ export default function RootLayout() {
       screenOptions={{
         headerShown: false,
         contentStyle: {
-          backgroundColor: "rgb(253, 247, 245)",
+          backgroundColor: theme.background,
         },
       }}
     >
@@ -32,9 +35,9 @@ export default function RootLayout() {
           headerShown: true,
           title: "Bookkeeping Currencies",
           headerStyle: {
-            backgroundColor: "rgb(128, 75, 56)",
+            backgroundColor: theme.headerBg,
           },
-          headerTintColor: "#fff",
+          headerTintColor: theme.headerText,
           headerBackButtonDisplayMode: "minimal",
         }}
       />
@@ -45,12 +48,20 @@ export default function RootLayout() {
           headerShown: true,
           title: "Default Currency",
           headerStyle: {
-            backgroundColor: "rgb(128, 75, 56)",
+            backgroundColor: theme.headerBg,
           },
-          headerTintColor: "#fff",
+          headerTintColor: theme.headerText,
           headerBackButtonDisplayMode: "minimal",
         }}
       />
     </Stack>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <AppThemeProvider>
+      <RootStack />
+    </AppThemeProvider>
   );
 }

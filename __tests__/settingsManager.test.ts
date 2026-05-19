@@ -19,6 +19,7 @@ describe("settingsManager unit tests", () => {
       defaultCurrencyCode: "USD",
       bookkeepingCurrencyCode: "USD",
       bookkeepingCurrencyCodes: ["USD"],
+      themeMode: "light",
     });
 
     expect(
@@ -31,6 +32,7 @@ describe("settingsManager unit tests", () => {
       defaultCurrencyCode: "USD",
       bookkeepingCurrencyCode: "USD",
       bookkeepingCurrencyCodes: ["USD"],
+      themeMode: "light",
     });
   });
 
@@ -46,6 +48,7 @@ describe("settingsManager unit tests", () => {
       defaultCurrencyCode: "USD",
       bookkeepingCurrencyCode: "USD",
       bookkeepingCurrencyCodes: ["USD"],
+      themeMode: "light",
     });
   });
 

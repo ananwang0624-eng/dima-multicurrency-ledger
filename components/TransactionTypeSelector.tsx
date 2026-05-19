@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FlatList,
   Modal,
@@ -10,14 +10,7 @@ import {
   type ViewStyle,
 } from "react-native";
 
-const COLORS = {
-  background: "rgb(253, 247, 245)",
-  panelBg: "rgb(246, 233, 228)",
-  active: "rgb(128, 75, 56)",
-  inactiveText: "rgb(133, 115, 110)",
-  divider: "rgb(239, 222, 216)",
-  overlay: "rgba(0,0,0,0.25)",
-} as const;
+import { useAppTheme } from "@/providers/AppThemeProvider";
 
 type TransactionType = "income" | "expense";
 
@@ -44,6 +37,7 @@ function WheelPicker({
   itemHeight?: number;
   visibleCount?: number;
 }) {
+  const { theme } = useAppTheme();
   const listRef = useRef<FlatList<TransactionOption>>(null);
   const containerHeight = itemHeight * visibleCount;
   const paddingVertical = (containerHeight - itemHeight) / 2;
@@ -54,25 +48,11 @@ function WheelPicker({
   }, [selectedValue, options]);
 
   useEffect(() => {
-    // 保持滚轮与外部受控值一致
     listRef.current?.scrollToOffset({
       offset: selectedIndex * itemHeight,
       animated: false,
     });
   }, [itemHeight, selectedIndex]);
-
-  const onMomentumEnd = useCallback(
-    (offsetY: number) => {
-      const rawIndex = offsetY / itemHeight;
-      const nextIndex = Math.round(rawIndex);
-      const clampedIndex = Math.max(0, Math.min(options.length - 1, nextIndex));
-      const nextOption = options[clampedIndex];
-      if (nextOption && nextOption.value !== selectedValue) {
-        onValueChange(nextOption.value);
-      }
-    },
-    [itemHeight, onValueChange, selectedValue, options],
-  );
 
   const renderItem = useCallback(
     ({ item }: ListRenderItemInfo<TransactionOption>) => {
@@ -82,9 +62,7 @@ function WheelPicker({
           <Text
             style={[
               styles.wheelItemText,
-              isSelected
-                ? styles.wheelItemTextSelected
-                : styles.wheelItemTextIdle,
+              { color: isSelected ? theme.accent : theme.textSecondary },
             ]}
           >
             {item.label}
@@ -92,7 +70,7 @@ function WheelPicker({
         </View>
       );
     },
-    [itemHeight, selectedValue],
+    [itemHeight, selectedValue, theme.accent, theme.textSecondary],
   );
 
   return (
@@ -106,7 +84,7 @@ function WheelPicker({
         snapToInterval={itemHeight}
         decelerationRate="fast"
         disableIntervalMomentum
-        nestedScrollEnabled={true}
+        nestedScrollEnabled
         contentContainerStyle={{ paddingVertical }}
         getItemLayout={(_, index) => ({
           length: itemHeight,
@@ -114,9 +92,18 @@ function WheelPicker({
           index,
         })}
         initialScrollIndex={selectedIndex}
-        onMomentumScrollEnd={(e) =>
-          onMomentumEnd(e.nativeEvent.contentOffset.y)
-        }
+        onMomentumScrollEnd={(e) => {
+          const rawIndex = e.nativeEvent.contentOffset.y / itemHeight;
+          const nextIndex = Math.round(rawIndex);
+          const clampedIndex = Math.max(
+            0,
+            Math.min(options.length - 1, nextIndex),
+          );
+          const nextOption = options[clampedIndex];
+          if (nextOption && nextOption.value !== selectedValue) {
+            onValueChange(nextOption.value);
+          }
+        }}
         renderItem={renderItem}
       />
 
@@ -127,6 +114,7 @@ function WheelPicker({
           {
             top: paddingVertical,
             height: itemHeight,
+            borderColor: theme.accent,
           },
         ]}
       />
@@ -145,11 +133,8 @@ export default function TransactionTypeSelector({
   onTypeChange,
   style,
 }: TransactionTypeSelectorProps) {
+  const { theme } = useAppTheme();
   const [modalVisible, setModalVisible] = useState(false);
-
-  // 打开/关闭选择器
-  const open = useCallback(() => setModalVisible(true), []);
-  const close = useCallback(() => setModalVisible(false), []);
 
   const selectedLabel = useMemo(() => {
     const option = TRANSACTION_OPTIONS.find(
@@ -163,30 +148,44 @@ export default function TransactionTypeSelector({
       <Pressable
         style={({ pressed }) => [
           styles.pickerBox,
-          pressed ? styles.pickerBoxPressed : null,
+          { backgroundColor: theme.surfaceAlt },
+          pressed ? { borderColor: theme.accent, opacity: 0.9 } : null,
         ]}
-        onPress={open}
+        onPress={() => setModalVisible(true)}
       >
-        <Text style={styles.pickerText}>{selectedLabel}</Text>
+        <Text style={[styles.pickerText, { color: theme.accent }]}>
+          {selectedLabel}
+        </Text>
       </Pressable>
 
       <Modal
         visible={modalVisible}
         transparent
         animationType="fade"
-        onRequestClose={close}
+        onRequestClose={() => setModalVisible(false)}
       >
-        {/* 选择面板 */}
         <View style={styles.modalOverlay}>
-          <Pressable style={styles.modalBackdrop} onPress={close} />
-          <View style={styles.modalPanel}>
+          <Pressable
+            style={[styles.modalBackdrop, { backgroundColor: theme.overlay }]}
+            onPress={() => setModalVisible(false)}
+          />
+          <View style={[styles.modalPanel, { backgroundColor: theme.cardBg }]}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Type</Text>
-              <Pressable onPress={close} style={styles.doneButton}>
-                <Text style={styles.doneButtonText}>Done</Text>
+              <Text style={[styles.modalTitle, { color: theme.accent }]}>
+                Select Type
+              </Text>
+              <Pressable
+                onPress={() => setModalVisible(false)}
+                style={styles.doneButton}
+              >
+                <Text style={[styles.doneButtonText, { color: theme.accent }]}>
+                  Done
+                </Text>
               </Pressable>
             </View>
-            <View style={styles.modalDivider} />
+            <View
+              style={[styles.modalDivider, { backgroundColor: theme.divider }]}
+            />
             <WheelPicker
               options={TRANSACTION_OPTIONS}
               selectedValue={selectedType}
@@ -204,7 +203,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   pickerBox: {
-    backgroundColor: COLORS.panelBg,
     borderRadius: 8,
     paddingVertical: 4,
     paddingHorizontal: 12,
@@ -213,14 +211,9 @@ const styles = StyleSheet.create({
     minWidth: 60,
     alignItems: "center",
   },
-  pickerBoxPressed: {
-    borderColor: COLORS.active,
-    opacity: 0.9,
-  },
   pickerText: {
     fontSize: 16,
     fontWeight: "700",
-    color: COLORS.active,
   },
   modalOverlay: {
     flex: 1,
@@ -228,10 +221,8 @@ const styles = StyleSheet.create({
   },
   modalBackdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: COLORS.overlay,
   },
   modalPanel: {
-    backgroundColor: "#fff",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingBottom: 34,
@@ -246,7 +237,6 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: "800",
-    color: COLORS.active,
   },
   doneButton: {
     paddingHorizontal: 16,
@@ -255,11 +245,9 @@ const styles = StyleSheet.create({
   doneButtonText: {
     fontSize: 16,
     fontWeight: "700",
-    color: COLORS.active,
   },
   modalDivider: {
     height: 2,
-    backgroundColor: COLORS.divider,
   },
   wheelContainer: {
     alignSelf: "stretch",
@@ -272,19 +260,12 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "800",
   },
-  wheelItemTextSelected: {
-    color: COLORS.active,
-  },
-  wheelItemTextIdle: {
-    color: COLORS.inactiveText,
-  },
   wheelSelectionFrame: {
     position: "absolute",
     left: 16,
     right: 16,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: COLORS.active,
     backgroundColor: "transparent",
   },
 });

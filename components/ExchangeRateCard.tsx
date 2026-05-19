@@ -5,17 +5,7 @@
 import { StyleSheet, Text, View } from "react-native";
 import BarChart from "./BarChart";
 import { getCurrencyByCode } from "@/data/currencies";
-
-// 主题色彩常量
-const BG_COLOR = "rgb(253, 247, 245)";
-const HEADER_COLOR = "rgb(128, 75, 56)";
-const DIVIDER_COLOR = "rgb(239, 222, 216)";
-const DARK_GRAY = "rgba(54, 48, 46, 1)";
-const TREND_UP_COLOR = "rgb(0, 150, 0)";
-const TREND_DOWN_COLOR = "rgb(220, 50, 50)";
-const LEVEL_INDICATOR_COLOR = "rgb(128, 75, 56)";
-const BAR_COLOR = "#96543f";
-const BAR_GRADIENT_END_COLOR = "#f8af9a";
+import { useAppTheme } from "@/providers/AppThemeProvider";
 
 type TrendType = "up" | "down" | "flat" | "insufficient-data";
 
@@ -38,18 +28,19 @@ export default function ExchangeRateCard({
   historicalRates,
   fluctuationPercentage,
 }: ExchangeRateCardProps) {
+  const { theme } = useAppTheme();
   const baseCurrencySymbol = getCurrencyByCode(baseCurrency)?.symbol || "";
 
   // 根据趋势渲染箭头
   const renderTrendArrow = () => {
     if (trend === "up") {
-      return <Text style={styles.trendUp}>↑</Text>;
+      return <Text style={[styles.trendUp, { color: theme.success }]}>↑</Text>;
     } else if (trend === "down") {
-      return <Text style={styles.trendDown}>↓</Text>;
+      return <Text style={[styles.trendDown, { color: theme.danger }]}>↓</Text>;
     } else if (trend === "flat") {
-      return <Text style={styles.trendFlat}>→</Text>;
+      return <Text style={[styles.trendFlat, { color: theme.textPrimary }]}>→</Text>;
     } else {
-      return <Text style={styles.trendUnknown}>-</Text>;
+      return <Text style={[styles.trendUnknown, { color: theme.textPrimary }]}>-</Text>;
     }
   };
 
@@ -60,8 +51,8 @@ export default function ExchangeRateCard({
     return (
       <View style={{ height: "100%", justifyContent: "space-between" }}>
         <View style={styles.levelLabels}>
-          <Text style={styles.levelLabelText}>Buy</Text>
-          <Text style={styles.levelLabelText}>Sell</Text>
+          <Text style={[styles.levelLabelText, { color: theme.accent }]}>Buy</Text>
+          <Text style={[styles.levelLabelText, { color: theme.accent }]}>Sell</Text>
         </View>
         <View style={styles.levelContainer}>
           {[1, 2, 3, 4, 5].map((slot) => (
@@ -69,11 +60,20 @@ export default function ExchangeRateCard({
               <View
                 style={[
                   styles.levelSlot,
+                  { borderColor: theme.divider },
                   effectiveLevel === slot && styles.levelSlotActive,
+                  effectiveLevel === slot
+                    ? {
+                        backgroundColor: theme.accent,
+                        borderColor: theme.accent,
+                      }
+                    : null,
                 ]}
               />
               {effectiveLevel === slot && (
-                <Text style={styles.levelArrow}>▼</Text>
+                <Text style={[styles.levelArrow, { color: theme.accent }]}>
+                  ▼
+                </Text>
               )}
             </View>
           ))}
@@ -83,13 +83,18 @@ export default function ExchangeRateCard({
   };
 
   return (
-    <View style={styles.card}>
+    <View
+      style={[
+        styles.card,
+        { backgroundColor: theme.cardBg, shadowColor: theme.shadow },
+      ]}
+    >
       <View style={styles.row}>
         <View style={styles.leftSection}>
-          <Text style={styles.title}>
+          <Text style={[styles.title, { color: theme.accent }]}>
             {baseCurrencySymbol} {baseCurrency}/{targetCurrency}
           </Text>
-          <Text style={styles.rateValue}>
+          <Text style={[styles.rateValue, { color: theme.textPrimary }]}>
             {currentRate > 0 ? currentRate.toFixed(4) : "-"}
           </Text>
         </View>
@@ -103,8 +108,9 @@ export default function ExchangeRateCard({
                   <Text
                     style={[
                       styles.fluctuationText,
-                      trend === "up" && { color: TREND_UP_COLOR },
-                      trend === "down" && { color: TREND_DOWN_COLOR },
+                      { color: theme.textPrimary },
+                      trend === "up" && { color: theme.success },
+                      trend === "down" && { color: theme.danger },
                     ]}
                   >
                     {"  "}
@@ -118,8 +124,8 @@ export default function ExchangeRateCard({
             <BarChart
               data={historicalRates}
               height={50}
-              barColor={BAR_COLOR}
-              gradientToColor={BAR_GRADIENT_END_COLOR}
+              barColor={theme.chartBar}
+              gradientToColor={theme.chartBarGradientEnd}
               backgroundColor="transparent"
               showValues={false}
             />
@@ -137,10 +143,8 @@ export default function ExchangeRateCard({
 const styles = StyleSheet.create({
   card: {
     borderRadius: 14,
-    backgroundColor: "#FFFFFF",
     paddingVertical: 8,
     paddingHorizontal: 20,
-    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 2,
@@ -152,7 +156,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: "700",
-    color: HEADER_COLOR,
     marginBottom: 4,
   },
   row: {
@@ -181,7 +184,6 @@ const styles = StyleSheet.create({
   rateValue: {
     fontSize: 26,
     fontWeight: "700",
-    color: DARK_GRAY,
   },
   trendContainer: {
     alignItems: "center",
@@ -191,28 +193,23 @@ const styles = StyleSheet.create({
   fluctuationText: {
     fontSize: 14,
     fontWeight: "600",
-    color: DARK_GRAY,
   },
   trendUp: {
     fontSize: 20,
     fontWeight: "bold",
-    color: TREND_UP_COLOR,
   },
   trendDown: {
     fontSize: 20,
     fontWeight: "bold",
-    color: TREND_DOWN_COLOR,
   },
   trendFlat: {
     fontSize: 20,
     fontWeight: "bold",
-    color: DARK_GRAY,
     opacity: 0.5,
   },
   trendUnknown: {
     fontSize: 20,
     fontWeight: "bold",
-    color: DARK_GRAY,
     opacity: 0.3,
   },
   levelWrapper: {
@@ -230,7 +227,6 @@ const styles = StyleSheet.create({
   },
   levelArrow: {
     fontSize: 10,
-    color: LEVEL_INDICATOR_COLOR,
     fontWeight: "bold",
     position: "absolute",
     top: -14,
@@ -240,13 +236,9 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 3,
     borderWidth: 1.5,
-    borderColor: DIVIDER_COLOR,
     backgroundColor: "transparent",
   },
-  levelSlotActive: {
-    backgroundColor: LEVEL_INDICATOR_COLOR,
-    borderColor: LEVEL_INDICATOR_COLOR,
-  },
+  levelSlotActive: {},
   levelLabels: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -254,7 +246,6 @@ const styles = StyleSheet.create({
   },
   levelLabelText: {
     fontSize: 14,
-    color: HEADER_COLOR,
     fontWeight: "600",
   },
 });

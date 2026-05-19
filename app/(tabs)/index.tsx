@@ -8,6 +8,7 @@ import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 import BalanceSummaryCard from "@/components/BalanceSummaryCard";
 import { MonthYearPicker } from "@/components/MonthYearPicker";
+import { useAppTheme } from "@/providers/AppThemeProvider";
 import TransactionRecordItem from "@/components/TransactionRecordItem";
 import {
   getTransactionsByMonth,
@@ -16,6 +17,7 @@ import {
 } from "@/utils/dataManager";
 
 export default function HomeTab() {
+  const { theme } = useAppTheme();
   // 初始化为当前年月
   const now = useMemo(() => new Date(), []);
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
@@ -55,7 +57,7 @@ export default function HomeTab() {
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={styles.header}>
         <BalanceSummaryCard />
 
@@ -81,7 +83,9 @@ export default function HomeTab() {
               <TransactionRecordItem key={record.uuid} record={record} />
             ))
           ) : (
-            <Text style={styles.emptyText}>No records</Text>
+            <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
+              No records
+            </Text>
           )}
         </View>
       </ScrollView>
@@ -92,7 +96,6 @@ export default function HomeTab() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "rgb(253, 247, 245)",
   },
   header: {
     padding: 20,
@@ -108,7 +111,6 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 14,
     fontWeight: "600",
-    color: "rgb(133, 115, 110)",
     textAlign: "center",
     paddingVertical: 40,
   },

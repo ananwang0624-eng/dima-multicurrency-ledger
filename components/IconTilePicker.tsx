@@ -18,13 +18,7 @@ import {
   type IconTileItem,
   type IconTilePickerValue,
 } from "@/data/iconTileItems";
-
-// 主题色彩常量
-const COLORS = {
-  tileBg: "rgb(246, 233, 228)",
-  active: "rgb(128, 75, 56)",
-  inactive: "rgb(133, 115, 110)",
-} as const;
+import { useAppTheme } from "@/providers/AppThemeProvider";
 
 export type { IconTilePickerValue };
 
@@ -37,6 +31,7 @@ export function IconTilePicker({
   onChange: (next: IconTilePickerValue) => void;
   style?: ViewStyle;
 }) {
+  const { theme } = useAppTheme();
   const { width: windowWidth } = useWindowDimensions();
   const items = ICON_TILE_ITEMS;
 
@@ -61,7 +56,7 @@ export function IconTilePicker({
         <View key={rowIndex} style={styles.row}>
           {row.map((item) => {
             const selected = item.value === value;
-            const tint = selected ? COLORS.active : COLORS.inactive;
+            const tint = selected ? theme.accent : theme.textSecondary;
 
             return (
               <Pressable
@@ -72,7 +67,11 @@ export function IconTilePicker({
                   {
                     width: tileSize,
                     height: tileSize,
-                    backgroundColor: item.bgColor ?? COLORS.tileBg,
+                    backgroundColor:
+                      theme.categoryTileBgColors[item.value] ??
+                      item.bgColor ??
+                      theme.surfaceAlt,
+                    borderColor: selected ? theme.accent : "transparent",
                     opacity: pressed ? 0.9 : 1,
                   },
                 ]}
@@ -104,14 +103,12 @@ const styles = StyleSheet.create({
   },
   tile: {
     borderRadius: 14,
-    backgroundColor: COLORS.tileBg,
     borderWidth: 2,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
   },
   tileSelected: {
-    borderColor: COLORS.active,
   },
   tileUnselected: {
     borderColor: "transparent",

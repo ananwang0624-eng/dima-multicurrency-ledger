@@ -13,6 +13,7 @@ import {
 } from "react-native";
 
 import { CURRENCIES, getCurrencyByCode } from "@/data/currencies";
+import { useAppTheme } from "@/providers/AppThemeProvider";
 import {
   addBookkeepingCurrencyCode,
   getSettings,
@@ -20,15 +21,15 @@ import {
   subscribeSettings,
   type AppSettings,
 } from "@/utils/settingsManager";
-
 import { getBalance, setBalance } from "@/utils/dataManager";
 
 export default function SetCurTypeScreen() {
+  const { theme } = useAppTheme();
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [balanceModalOpen, setBalanceModalOpen] = useState(false);
   const [balanceCurrencyCode, setBalanceCurrencyCode] = useState<string | null>(
-    null
+    null,
   );
   const [balanceInput, setBalanceInput] = useState("0.00");
 
@@ -52,18 +53,19 @@ export default function SetCurTypeScreen() {
   useFocusEffect(
     useCallback(() => {
       refresh();
-    }, [refresh])
+    }, [refresh]),
   );
 
-  const enabledCodes = useMemo(() => {
-    return settings?.bookkeepingCurrencyCodes ?? ["USD"];
-  }, [settings?.bookkeepingCurrencyCodes]);
+  const enabledCodes = useMemo(
+    () => settings?.bookkeepingCurrencyCodes ?? ["USD"],
+    [settings?.bookkeepingCurrencyCodes],
+  );
 
   const enabledCurrencies = useMemo(() => {
     return enabledCodes
       .map((c) => getCurrencyByCode(c))
       .filter((c): c is NonNullable<ReturnType<typeof getCurrencyByCode>> =>
-        Boolean(c)
+        Boolean(c),
       );
   }, [enabledCodes]);
 
@@ -79,7 +81,7 @@ export default function SetCurTypeScreen() {
     try {
       const current = await getBalance(upper);
       setBalanceInput(
-        (Number.isFinite(current) ? Number(current) : 0).toFixed(2)
+        (Number.isFinite(current) ? Number(current) : 0).toFixed(2),
       );
     } catch (e) {
       console.error("Failed to load balance:", e);
@@ -111,32 +113,61 @@ export default function SetCurTypeScreen() {
   }, [balanceCurrencyCode, balanceInput]);
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Bookkeeping Currencies</Text>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <Text style={[styles.title, { color: theme.accent }]}>
+        Bookkeeping Currencies
+      </Text>
 
-      <View style={styles.section}>
+      <View
+        style={[
+          styles.section,
+          {
+            borderColor: theme.buttonSecondaryBorder,
+            backgroundColor: theme.cardBg,
+          },
+        ]}
+      >
         <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>Added Currencies</Text>
+          <Text style={[styles.sectionTitle, { color: theme.accent }]}>
+            Added Currencies
+          </Text>
           <TouchableOpacity
-            style={styles.addButton}
+            style={[
+              styles.addButton,
+              {
+                borderColor: theme.divider,
+                backgroundColor: theme.iconCircleBg,
+              },
+            ]}
             onPress={() => setPickerOpen(true)}
           >
-            <Text style={styles.addButtonText}>Add</Text>
+            <Text style={[styles.addButtonText, { color: theme.accent }]}>
+              Add
+            </Text>
           </TouchableOpacity>
         </View>
 
         <FlatList
           data={enabledCurrencies}
           keyExtractor={(item) => item.code}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
+          ItemSeparatorComponent={() => (
+            <View style={[styles.separator, { backgroundColor: theme.divider }]} />
+          )}
           renderItem={({ item }) => {
             const canDelete = enabledCurrencies.length > 1;
             return (
               <View style={styles.row}>
-                <Text style={styles.symbol}>{item.symbol}</Text>
+                <Text style={[styles.symbol, { color: theme.accent }]}>
+                  {item.symbol}
+                </Text>
                 <View style={styles.rowText}>
-                  <Text style={styles.code}>{item.code}</Text>
-                  <Text style={styles.name} numberOfLines={1}>
+                  <Text style={[styles.code, { color: theme.textPrimary }]}>
+                    {item.code}
+                  </Text>
+                  <Text
+                    style={[styles.name, { color: theme.textSecondary }]}
+                    numberOfLines={1}
+                  >
                     {item.name}
                   </Text>
                 </View>
@@ -148,9 +179,17 @@ export default function SetCurTypeScreen() {
                         console.error("Failed to open balance modal:", e),
                       );
                     }}
-                    style={styles.setBalanceButton}
+                    style={[
+                      styles.actionButton,
+                      {
+                        borderColor: theme.divider,
+                        backgroundColor: theme.surface,
+                      },
+                    ]}
                   >
-                    <Text style={styles.setBalanceButtonText}>set balance</Text>
+                    <Text style={[styles.actionButtonText, { color: theme.accent }]}>
+                      set balance
+                    </Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -164,14 +203,18 @@ export default function SetCurTypeScreen() {
                       }
                     }}
                     style={[
-                      styles.deleteButton,
+                      styles.actionButton,
+                      {
+                        borderColor: theme.divider,
+                        backgroundColor: theme.surface,
+                      },
                       !canDelete ? styles.deleteButtonDisabled : null,
                     ]}
                   >
                     <Text
                       style={[
-                        styles.deleteButtonText,
-                        !canDelete ? styles.deleteButtonTextDisabled : null,
+                        styles.actionButtonText,
+                        { color: canDelete ? theme.accent : theme.textSecondary },
                       ]}
                     >
                       Delete
@@ -184,7 +227,9 @@ export default function SetCurTypeScreen() {
         />
 
         {enabledCurrencies.length <= 1 ? (
-          <Text style={styles.hint}>At least 1 currency must be kept</Text>
+          <Text style={[styles.hint, { color: theme.textSecondary }]}>
+            At least 1 currency must be kept
+          </Text>
         ) : null}
       </View>
 
@@ -195,15 +240,30 @@ export default function SetCurTypeScreen() {
         onRequestClose={() => setPickerOpen(false)}
       >
         <Pressable
-          style={styles.modalBackdrop}
+          style={[styles.modalBackdrop, { backgroundColor: theme.overlay }]}
           onPress={() => setPickerOpen(false)}
         >
-          <Pressable style={styles.modalCard} onPress={() => undefined}>
-            <Text style={styles.modalTitle}>Add Bookkeeping Currency</Text>
+          <Pressable
+            style={[
+              styles.modalCard,
+              {
+                backgroundColor: theme.cardBg,
+                borderColor: theme.divider,
+              },
+            ]}
+            onPress={() => undefined}
+          >
+            <Text style={[styles.modalTitle, { color: theme.accent }]}>
+              Add Bookkeeping Currency
+            </Text>
             <FlatList
               data={addableCurrencies}
               keyExtractor={(item) => item.code}
-              ItemSeparatorComponent={() => <View style={styles.separator} />}
+              ItemSeparatorComponent={() => (
+                <View
+                  style={[styles.separator, { backgroundColor: theme.divider }]}
+                />
+              )}
               renderItem={({ item }) => {
                 return (
                   <Pressable
@@ -218,10 +278,17 @@ export default function SetCurTypeScreen() {
                       }
                     }}
                   >
-                    <Text style={styles.symbol}>{item.symbol}</Text>
+                    <Text style={[styles.symbol, { color: theme.accent }]}>
+                      {item.symbol}
+                    </Text>
                     <View style={styles.rowText}>
-                      <Text style={styles.code}>{item.code}</Text>
-                      <Text style={styles.name} numberOfLines={1}>
+                      <Text style={[styles.code, { color: theme.textPrimary }]}>
+                        {item.code}
+                      </Text>
+                      <Text
+                        style={[styles.name, { color: theme.textSecondary }]}
+                        numberOfLines={1}
+                      >
                         {item.name}
                       </Text>
                     </View>
@@ -229,7 +296,9 @@ export default function SetCurTypeScreen() {
                 );
               }}
               ListEmptyComponent={
-                <Text style={styles.empty}>All available currencies added</Text>
+                <Text style={[styles.empty, { color: theme.textSecondary }]}>
+                  All available currencies added
+                </Text>
               }
             />
           </Pressable>
@@ -243,40 +312,79 @@ export default function SetCurTypeScreen() {
         onRequestClose={() => setBalanceModalOpen(false)}
       >
         <Pressable
-          style={styles.modalBackdrop}
+          style={[styles.modalBackdrop, { backgroundColor: theme.overlay }]}
           onPress={() => setBalanceModalOpen(false)}
         >
-          <Pressable style={styles.modalCard} onPress={() => undefined}>
-            <Text style={styles.modalTitle}>set balance</Text>
+          <Pressable
+            style={[
+              styles.modalCard,
+              {
+                backgroundColor: theme.cardBg,
+                borderColor: theme.divider,
+              },
+            ]}
+            onPress={() => undefined}
+          >
+            <Text style={[styles.modalTitle, { color: theme.accent }]}>
+              set balance
+            </Text>
             <View style={styles.balanceModalBody}>
-              <Text style={styles.balanceHint}>
+              <Text style={[styles.balanceHint, { color: theme.textSecondary }]}>
                 Current Balance ({balanceCurrencyCode ?? ""})
               </Text>
               <TextInput
                 value={balanceInput}
                 onChangeText={setBalanceInput}
                 placeholder="0.00"
+                placeholderTextColor={theme.inputPlaceholder}
                 keyboardType="decimal-pad"
-                style={styles.balanceInput}
+                style={[
+                  styles.balanceInput,
+                  {
+                    borderColor: theme.inputBorder,
+                    color: theme.inputText,
+                    backgroundColor: theme.inputBg,
+                  },
+                ]}
               />
 
-              <View style={{ height: 12 }} />
+              <View style={styles.balanceActionsSpacer} />
               <View style={styles.balanceActions}>
                 <TouchableOpacity
-                  style={styles.balanceCancelButton}
+                  style={[
+                    styles.balanceActionButton,
+                    {
+                      borderColor: theme.divider,
+                      backgroundColor: theme.surface,
+                    },
+                  ]}
                   onPress={() => setBalanceModalOpen(false)}
                 >
-                  <Text style={styles.balanceCancelText}>Cancel</Text>
+                  <Text
+                    style={[styles.balanceActionText, { color: theme.accent }]}
+                  >
+                    Cancel
+                  </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={styles.balanceSaveButton}
+                  style={[
+                    styles.balanceActionButton,
+                    {
+                      borderColor: theme.divider,
+                      backgroundColor: theme.iconCircleBg,
+                    },
+                  ]}
                   onPress={() => {
                     saveBalance().catch((e) =>
                       console.error("Failed to save balance:", e),
                     );
                   }}
                 >
-                  <Text style={styles.balanceSaveText}>Save</Text>
+                  <Text
+                    style={[styles.balanceActionText, { color: theme.accent }]}
+                  >
+                    Save
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -287,23 +395,15 @@ export default function SetCurTypeScreen() {
   );
 }
 
-const HEADER_COLOR = "rgb(128, 75, 56)";
-const BORDER_COLOR = "rgb(128, 75, 56)";
-const BG_COLOR = "rgb(253, 247, 245)";
-const CARD_BG = "rgb(255, 255, 255)";
-const DIVIDER_COLOR = "rgb(239, 222, 216)";
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: BG_COLOR,
     padding: 20,
   },
   title: {
     fontSize: 24,
     fontWeight: "bold",
     marginBottom: 20,
-    color: HEADER_COLOR,
   },
   section: {
     marginBottom: 16,
@@ -311,8 +411,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: BORDER_COLOR,
-    backgroundColor: CARD_BG,
   },
   sectionHeaderRow: {
     flexDirection: "row",
@@ -323,20 +421,16 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: "800",
-    color: HEADER_COLOR,
   },
   addButton: {
     borderWidth: 2,
-    borderColor: DIVIDER_COLOR,
     borderRadius: 999,
     paddingVertical: 6,
     paddingHorizontal: 12,
-    backgroundColor: "rgb(245, 218, 208)",
   },
   addButtonText: {
     fontSize: 14,
     fontWeight: "800",
-    color: HEADER_COLOR,
   },
   row: {
     flexDirection: "row",
@@ -349,7 +443,6 @@ const styles = StyleSheet.create({
   symbol: {
     fontSize: 18,
     fontWeight: "800",
-    color: HEADER_COLOR,
     width: 32,
     textAlign: "center",
   },
@@ -364,67 +457,41 @@ const styles = StyleSheet.create({
   code: {
     fontSize: 15,
     fontWeight: "800",
-    color: "rgb(32, 24, 23)",
   },
   name: {
     marginTop: 2,
     fontSize: 12,
     fontWeight: "600",
-    color: "rgb(133, 115, 110)",
   },
-  deleteButton: {
+  actionButton: {
     borderWidth: 2,
-    borderColor: DIVIDER_COLOR,
     borderRadius: 999,
     paddingVertical: 6,
     paddingHorizontal: 10,
-    backgroundColor: "rgb(255, 255, 255)",
+  },
+  actionButtonText: {
+    fontSize: 13,
+    fontWeight: "800",
   },
   deleteButtonDisabled: {
     opacity: 0.4,
-  },
-  deleteButtonText: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: HEADER_COLOR,
-  },
-  deleteButtonTextDisabled: {
-    color: "rgb(133, 115, 110)",
-  },
-  setBalanceButton: {
-    borderWidth: 2,
-    borderColor: DIVIDER_COLOR,
-    borderRadius: 999,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    backgroundColor: "rgb(255, 255, 255)",
-  },
-  setBalanceButtonText: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: HEADER_COLOR,
   },
   hint: {
     marginTop: 10,
     fontSize: 12,
     fontWeight: "600",
-    color: "rgb(133, 115, 110)",
   },
   separator: {
     height: 1,
-    backgroundColor: DIVIDER_COLOR,
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",
     padding: 20,
     justifyContent: "center",
   },
   modalCard: {
-    backgroundColor: CARD_BG,
     borderRadius: 14,
     borderWidth: 2,
-    borderColor: DIVIDER_COLOR,
     maxHeight: "80%",
     overflow: "hidden",
   },
@@ -433,7 +500,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     fontSize: 16,
     fontWeight: "900",
-    color: HEADER_COLOR,
   },
   modalRow: {
     flexDirection: "row",
@@ -449,19 +515,18 @@ const styles = StyleSheet.create({
   balanceHint: {
     fontSize: 13,
     fontWeight: "700",
-    color: "rgb(133, 115, 110)",
     marginBottom: 8,
   },
   balanceInput: {
     borderWidth: 2,
-    borderColor: DIVIDER_COLOR,
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 16,
     fontWeight: "800",
-    color: "rgb(32, 24, 23)",
-    backgroundColor: "rgb(255, 255, 255)",
+  },
+  balanceActionsSpacer: {
+    height: 12,
   },
   balanceActions: {
     flexDirection: "row",
@@ -469,37 +534,20 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     gap: 10,
   },
-  balanceCancelButton: {
+  balanceActionButton: {
     borderWidth: 2,
-    borderColor: DIVIDER_COLOR,
     borderRadius: 999,
     paddingVertical: 8,
     paddingHorizontal: 14,
-    backgroundColor: "rgb(255, 255, 255)",
   },
-  balanceCancelText: {
+  balanceActionText: {
     fontSize: 14,
     fontWeight: "800",
-    color: HEADER_COLOR,
-  },
-  balanceSaveButton: {
-    borderWidth: 2,
-    borderColor: DIVIDER_COLOR,
-    borderRadius: 999,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    backgroundColor: "rgb(245, 218, 208)",
-  },
-  balanceSaveText: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: HEADER_COLOR,
   },
   empty: {
     paddingVertical: 18,
     paddingHorizontal: 16,
     fontSize: 13,
     fontWeight: "700",
-    color: "rgb(133, 115, 110)",
   },
 });

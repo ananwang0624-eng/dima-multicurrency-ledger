@@ -14,15 +14,7 @@ import {
   type ViewStyle,
 } from "react-native";
 
-// 主题色彩常量
-const COLORS = {
-  background: "rgb(253, 247, 245)",
-  panelBg: "rgb(246, 233, 228)",
-  active: "rgb(128, 75, 56)",
-  inactiveText: "rgb(133, 115, 110)",
-  divider: "rgb(239, 222, 216)",
-  overlay: "rgba(0,0,0,0.25)",
-} as const;
+import { useAppTheme } from "@/providers/AppThemeProvider";
 
 /**
  * 数字补零
@@ -61,6 +53,7 @@ function WheelPicker({
   itemHeight?: number;
   visibleCount?: number;
 }) {
+  const { theme } = useAppTheme();
   const listRef = useRef<FlatList<number>>(null);
   const containerHeight = itemHeight * visibleCount;
   const paddingVertical = (containerHeight - itemHeight) / 2;
@@ -99,9 +92,7 @@ function WheelPicker({
           <Text
             style={[
               styles.wheelItemText,
-              isSelected
-                ? styles.wheelItemTextSelected
-                : styles.wheelItemTextIdle,
+              { color: isSelected ? theme.accent : theme.textSecondary },
             ]}
           >
             {format(item)}
@@ -109,7 +100,7 @@ function WheelPicker({
         </View>
       );
     },
-    [format, itemHeight, selectedValue],
+    [format, itemHeight, selectedValue, theme.accent, theme.textSecondary],
   );
 
   return (
@@ -144,6 +135,7 @@ function WheelPicker({
           {
             top: paddingVertical,
             height: itemHeight,
+            borderColor: theme.accent,
           },
         ]}
       />
@@ -168,6 +160,7 @@ export function MonthYearPicker({
   maxYear?: number;
   style?: ViewStyle;
 }) {
+  const { theme } = useAppTheme();
   const [activeField, setActiveField] = useState<FieldType | null>(null);
 
   const years = useMemo(() => {
@@ -207,33 +200,41 @@ export function MonthYearPicker({
   return (
     <View style={[styles.container, style]}>
       <View style={styles.row}>
-        <Text style={styles.label}>Records</Text>
+        <Text style={[styles.label, { color: theme.accent }]}>Records</Text>
 
         <View style={styles.pickerRow}>
           {/* 年月选择 */}
           <Pressable
             style={({ pressed }) => [
               styles.pickerBox,
+              { backgroundColor: theme.surfaceAlt },
               pressed ? styles.pickerBoxPressed : null,
+              pressed ? { borderColor: theme.accent } : null,
             ]}
             onPress={() => open("year")}
           >
-            <Text style={styles.pickerText}>{String(year)}</Text>
+            <Text style={[styles.pickerText, { color: theme.accent }]}>
+              {String(year)}
+            </Text>
           </Pressable>
 
-          <Text style={styles.separator}>-</Text>
+          <Text style={[styles.separator, { color: theme.textSecondary }]}>-</Text>
 
           <Pressable
             style={({ pressed }) => [
               styles.pickerBox,
+              { backgroundColor: theme.surfaceAlt },
               pressed ? styles.pickerBoxPressed : null,
+              pressed ? { borderColor: theme.accent } : null,
             ]}
             onPress={() => open("month")}
           >
-            <Text style={styles.pickerText}>{pad2(month)}</Text>
+            <Text style={[styles.pickerText, { color: theme.accent }]}>
+              {pad2(month)}
+            </Text>
           </Pressable>
 
-          <Text style={styles.separator}></Text>
+          <Text style={[styles.separator, { color: theme.textSecondary }]}></Text>
         </View>
       </View>
 
@@ -245,15 +246,24 @@ export function MonthYearPicker({
       >
         {/* 选择面板 */}
         <View style={styles.modalOverlay}>
-          <Pressable style={styles.modalBackdrop} onPress={close} />
-          <View style={styles.modalPanel}>
+          <Pressable
+            style={[styles.modalBackdrop, { backgroundColor: theme.overlay }]}
+            onPress={close}
+          />
+          <View style={[styles.modalPanel, { backgroundColor: theme.cardBg }]}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{modalTitle}</Text>
+              <Text style={[styles.modalTitle, { color: theme.accent }]}>
+                {modalTitle}
+              </Text>
               <Pressable onPress={close} style={styles.doneButton}>
-                <Text style={styles.doneButtonText}>Done</Text>
+                <Text style={[styles.doneButtonText, { color: theme.accent }]}>
+                  Done
+                </Text>
               </Pressable>
             </View>
-            <View style={styles.modalDivider} />
+            <View
+              style={[styles.modalDivider, { backgroundColor: theme.divider }]}
+            />
             {wheelConfig ? (
               <WheelPicker
                 values={wheelConfig.values}
@@ -281,7 +291,6 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: "700",
-    color: COLORS.active,
   },
   pickerRow: {
     flexDirection: "row",
@@ -289,7 +298,6 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   pickerBox: {
-    backgroundColor: COLORS.panelBg,
     borderRadius: 8,
     paddingVertical: 4,
     paddingHorizontal: 12,
@@ -299,23 +307,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   pickerBoxPressed: {
-    borderColor: COLORS.active,
     opacity: 0.9,
   },
   pickerText: {
     fontSize: 16,
     fontWeight: "700",
-    color: COLORS.active,
   },
   separator: {
     fontSize: 14,
     fontWeight: "600",
-    color: COLORS.inactiveText,
-  },
-  count: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: COLORS.inactiveText,
   },
   modalOverlay: {
     flex: 1,
@@ -323,10 +323,8 @@ const styles = StyleSheet.create({
   },
   modalBackdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: COLORS.overlay,
   },
   modalPanel: {
-    backgroundColor: "#fff",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingBottom: 34,
@@ -341,7 +339,6 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: "800",
-    color: COLORS.active,
   },
   doneButton: {
     paddingHorizontal: 16,
@@ -350,11 +347,9 @@ const styles = StyleSheet.create({
   doneButtonText: {
     fontSize: 16,
     fontWeight: "700",
-    color: COLORS.active,
   },
   modalDivider: {
     height: 2,
-    backgroundColor: COLORS.divider,
   },
   wheelContainer: {
     alignSelf: "stretch",
@@ -367,19 +362,13 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "800",
   },
-  wheelItemTextSelected: {
-    color: COLORS.active,
-  },
-  wheelItemTextIdle: {
-    color: COLORS.inactiveText,
-  },
   wheelSelectionFrame: {
     position: "absolute",
     left: 16,
     right: 16,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: COLORS.active,
+    borderColor: "transparent",
     backgroundColor: "transparent",
   },
 });

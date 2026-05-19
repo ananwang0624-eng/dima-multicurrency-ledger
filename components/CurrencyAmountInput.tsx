@@ -19,14 +19,7 @@ import {
   getCurrencyByCode,
   type Currency,
 } from "@/data/currencies";
-
-// 主题色彩常量
-const COLORS = {
-  active: "rgb(128, 75, 56)",
-  inactiveText: "rgb(133, 115, 110)",
-  divider: "rgb(239, 222, 216)",
-  placeholder: "rgb(133, 115, 110)",
-} as const;
+import { useAppTheme } from "@/providers/AppThemeProvider";
 
 export function CurrencyAmountInput({
   currencyCode,
@@ -43,6 +36,7 @@ export function CurrencyAmountInput({
   currencyCodes?: string[]; // 限定的币种代码列表（可选）
   style?: ViewStyle; // 自定义样式
 }) {
+  const { theme } = useAppTheme();
   const [open, setOpen] = useState(false);
   const [selection, setSelection] = useState<{ start: number; end: number }>();
 
@@ -74,14 +68,21 @@ export function CurrencyAmountInput({
     <View style={[styles.container, style]}>
       {/* 币种选择按钮 */}
       <Pressable style={styles.currencyButton} onPress={() => setOpen(true)}>
-        <Text style={styles.currencySymbol}>{currency.symbol}</Text>
-        <Text style={styles.currencyChevron}>▾</Text>
+        <Text style={[styles.currencySymbol, { color: theme.accent }]}>
+          {currency.symbol}
+        </Text>
+        <Text style={[styles.currencyChevron, { color: theme.textSecondary }]}>
+          ▾
+        </Text>
       </Pressable>
 
       {/* 金额输入框（用自定义占位文本避免 Android 基线问题） */}
       <View style={styles.amountField}>
         {amount.length === 0 ? (
-          <Text style={styles.amountPlaceholder} pointerEvents="none">
+          <Text
+            style={[styles.amountPlaceholder, { color: theme.inputPlaceholder }]}
+            pointerEvents="none"
+          >
             0.00
           </Text>
         ) : null}
@@ -93,7 +94,7 @@ export function CurrencyAmountInput({
           placeholder=""
           keyboardType="decimal-pad"
           inputMode="decimal"
-          style={styles.amountInput}
+          style={[styles.amountInput, { color: theme.inputText }]}
           multiline={false}
           scrollEnabled={false}
           underlineColorAndroid="transparent"
@@ -113,30 +114,49 @@ export function CurrencyAmountInput({
         animationType="fade"
         onRequestClose={() => setOpen(false)}
       >
-        <Pressable style={styles.modalBackdrop} onPress={() => setOpen(false)}>
-          <Pressable style={styles.dropdown} onPress={() => undefined}>
+        <Pressable
+          style={[styles.modalBackdrop, { backgroundColor: theme.overlay }]}
+          onPress={() => setOpen(false)}
+        >
+          <Pressable
+            style={[styles.dropdown, { backgroundColor: theme.cardBg }]}
+            onPress={() => undefined}
+          >
             <FlatList
               data={options}
               keyExtractor={(item) => item.code}
               initialNumToRender={20}
-              ItemSeparatorComponent={() => <View style={styles.separator} />}
+              ItemSeparatorComponent={() => (
+                <View
+                  style={[styles.separator, { backgroundColor: theme.divider }]}
+                />
+              )}
               renderItem={({ item }) => {
                 const selected = item.code === currency.code;
                 return (
                   <Pressable
                     style={[
                       styles.optionRow,
-                      selected ? styles.optionRowSelected : null,
+                      selected
+                        ? { backgroundColor: theme.selectedBg }
+                        : null,
                     ]}
                     onPress={() => {
                       onCurrencyChange(item.code);
                       setOpen(false);
                     }}
                   >
-                    <Text style={styles.optionSymbol}>{item.symbol}</Text>
+                    <Text style={[styles.optionSymbol, { color: theme.accent }]}>
+                      {item.symbol}
+                    </Text>
                     <View style={styles.optionText}>
-                      <Text style={styles.optionCode}>{item.code}</Text>
-                      <Text style={styles.optionName} numberOfLines={1}>
+                      <Text style={[styles.optionCode, { color: theme.accent }]}>
+                        {item.code}
+                      </Text>
+                      <Text
+                        style={[styles.optionName, { color: theme.textSecondary }]}
+                        numberOfLines={1}
+                      >
                         {item.name}
                       </Text>
                     </View>
@@ -167,11 +187,9 @@ const styles = StyleSheet.create({
   currencySymbol: {
     fontSize: 36,
     fontWeight: "700",
-    color: COLORS.active,
   },
   currencyChevron: {
     fontSize: 26,
-    color: COLORS.inactiveText,
     paddingTop: 2,
   },
   amountField: {
@@ -187,7 +205,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     textAlign: "right",
     textAlignVertical: "center",
-    color: "#000",
     paddingVertical: 0,
     paddingHorizontal: 0,
     includeFontPadding: false,
@@ -198,24 +215,20 @@ const styles = StyleSheet.create({
     fontSize: 36,
     lineHeight: 44,
     fontWeight: "700",
-    color: COLORS.placeholder,
     includeFontPadding: false,
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.15)",
     justifyContent: "center",
     paddingHorizontal: 16,
   },
   dropdown: {
-    backgroundColor: "#fff",
     borderRadius: 14,
     overflow: "hidden",
     maxHeight: "70%",
   },
   separator: {
     height: 1,
-    backgroundColor: COLORS.divider,
   },
   optionRow: {
     flexDirection: "row",
@@ -224,14 +237,10 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     gap: 10,
   },
-  optionRowSelected: {
-    backgroundColor: "rgba(128, 75, 56, 0.08)",
-  },
   optionSymbol: {
     width: 34,
     textAlign: "center",
     fontSize: 20,
-    color: COLORS.active,
   },
   optionText: {
     flex: 1,
@@ -239,11 +248,9 @@ const styles = StyleSheet.create({
   optionCode: {
     fontSize: 16,
     fontWeight: "700",
-    color: COLORS.active,
   },
   optionName: {
     marginTop: 2,
     fontSize: 14,
-    color: COLORS.inactiveText,
   },
 });

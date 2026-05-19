@@ -6,12 +6,15 @@ import { useCallback } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 import SubmenuNavButton from "@/components/SubmenuNavButton";
+import { useAppTheme } from "@/providers/AppThemeProvider";
 import {
   clearAllTransactions,
   seedDeterministicTestTransactions,
 } from "@/utils/dataManager";
 
 export default function SettingsTab() {
+  const { theme } = useAppTheme();
+
   // 清空所有交易记录
   const handleClearAll = useCallback(async () => {
     try {
@@ -31,7 +34,7 @@ export default function SettingsTab() {
   }, []);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <SubmenuNavButton
         title="Currency Units"
         subtitle="Set bookkeeping currency units"
@@ -48,15 +51,38 @@ export default function SettingsTab() {
         iconName="cash-outline"
       />
 
-      <TouchableOpacity style={styles.dangerButton} onPress={handleClearAll}>
-        <Text style={styles.dangerButtonText}>Clear All Records</Text>
+      <TouchableOpacity
+        style={[
+          styles.dangerButton,
+          {
+            borderColor: theme.buttonSecondaryBorder,
+            backgroundColor: theme.buttonSecondaryBg,
+          },
+        ]}
+        onPress={handleClearAll}
+      >
+        <Text
+          style={[styles.dangerButtonText, { color: theme.buttonSecondaryText }]}
+        >
+          Clear All Records
+        </Text>
       </TouchableOpacity>
 
       <TouchableOpacity
-        style={styles.secondaryButton}
+        style={[
+          styles.secondaryButton,
+          { backgroundColor: theme.buttonPrimaryBg },
+        ]}
         onPress={handleSeedTestData}
       >
-        <Text style={styles.secondaryButtonText}>Generate Fixed Test Data</Text>
+        <Text
+          style={[
+            styles.secondaryButtonText,
+            { color: theme.buttonPrimaryText },
+          ]}
+        >
+          Generate Fixed Test Data
+        </Text>
       </TouchableOpacity>
     </View>
   );
@@ -65,7 +91,6 @@ export default function SettingsTab() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "rgb(253, 247, 245)",
     padding: 20,
   },
   dangerButton: {
@@ -75,22 +100,18 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
     borderWidth: 2,
-    borderColor: "rgb(128, 75, 56)",
   },
   dangerButtonText: {
-    color: "rgb(128, 75, 56)",
     fontSize: 16,
     fontWeight: "bold",
   },
   secondaryButton: {
     marginTop: 12,
-    backgroundColor: "rgb(128, 75, 56)",
     padding: 16,
     borderRadius: 8,
     alignItems: "center",
   },
   secondaryButtonText: {
-    color: "#fff",
     fontSize: 16,
     fontWeight: "bold",
   },

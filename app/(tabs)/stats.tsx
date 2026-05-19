@@ -4,6 +4,7 @@
  */
 import ExpenseCategoryPieChart from "@/components/ExpenseCategoryPieChart";
 import { MonthYearPicker } from "@/components/MonthYearPicker";
+import { useAppTheme } from "@/providers/AppThemeProvider";
 import TransactionTypeSelector from "@/components/TransactionTypeSelector";
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
@@ -22,6 +23,7 @@ import {
 type TransactionType = "income" | "expense";
 
 export default function StatsTab() {
+  const { theme } = useAppTheme();
   // 初始化为当前年月
   const now = useMemo(() => new Date(), []);
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
@@ -132,7 +134,7 @@ export default function StatsTab() {
   }, [neededCurrencies, defaultCurrency]);
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={styles.content}>
         {/* 选择器行 */}
         <View style={styles.selectorsRow}>
@@ -153,12 +155,20 @@ export default function StatsTab() {
         </View>
 
         {/* 分类饼图 */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
+        <View
+          style={[
+            styles.section,
+            {
+              backgroundColor: theme.cardBg,
+              shadowColor: theme.shadow,
+            },
+          ]}
+        >
+          <Text style={[styles.sectionTitle, { color: theme.accent }]}>
             {transactionType === "expense" ? "Expense" : "Income"} Distribution
             by Category
           </Text>
-          <Text style={styles.sectionHint}>
+          <Text style={[styles.sectionHint, { color: theme.textSecondary }]}>
             Shows {transactionType === "expense" ? "expense" : "income"}{" "}
             proportion by category (converted to {defaultCurrency})
           </Text>
@@ -177,7 +187,6 @@ export default function StatsTab() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "rgb(253, 247, 245)",
   },
   content: {
     padding: 20,
@@ -196,10 +205,8 @@ const styles = StyleSheet.create({
   },
   section: {
     marginTop: 16,
-    backgroundColor: "#FFFFFF",
     borderRadius: 12,
     padding: 16,
-    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
@@ -208,13 +215,11 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: "800",
-    color: "rgb(128, 75, 56)",
   },
   sectionHint: {
     marginTop: 6,
     fontSize: 12,
     fontWeight: "600",
-    color: "rgb(133, 115, 110)",
     marginBottom: 12,
   },
 });

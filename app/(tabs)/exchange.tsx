@@ -26,6 +26,7 @@ import {
 } from "react-native";
 import ExchangeRateCard from "@/components/ExchangeRateCard";
 import { OptionPicker } from "@/components/OptionPicker";
+import { useAppTheme } from "@/providers/AppThemeProvider";
 
 /**
  * 从汇率数据中提取最近7天的汇率值和日期标签
@@ -53,6 +54,7 @@ function getLastSevenDaysData(data: ExchangeRateData): {
 }
 
 export default function ExchangeTab() {
+  const { theme } = useAppTheme();
   const [exchangeRateData, setExchangeRateData] = useState<ExchangeRateData[]>(
     [],
   );
@@ -175,11 +177,15 @@ export default function ExchangeTab() {
       {/* 汇率卡片列表 */}
       {isLoadingRates ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="small" color="rgb(128, 75, 56)" />
-          <Text style={styles.loadingText}>Loading...</Text>
+          <ActivityIndicator size="small" color={theme.accent} />
+          <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
+            Loading...
+          </Text>
         </View>
       ) : ratesError ? (
-        <Text style={styles.errorText}>Failed to load: {ratesError}</Text>
+        <Text style={[styles.errorText, { color: theme.danger }]}>
+          Failed to load: {ratesError}
+        </Text>
       ) : exchangeRateData.length > 0 ? (
         <View style={{ gap: 12 }}>
           {exchangeRateData.map((data) => {
@@ -248,7 +254,9 @@ export default function ExchangeTab() {
           })}
         </View>
       ) : (
-        <Text style={styles.emptyText}>No exchange rate data</Text>
+        <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
+          No exchange rate data
+        </Text>
       )}
     </ScrollView>
   );
@@ -257,21 +265,9 @@ export default function ExchangeTab() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "rgb(253, 247, 245)",
   },
   content: {
     padding: 20,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: "rgb(128, 75, 56)",
-  },
-  subtitle: {
-    marginTop: 8,
-    fontSize: 14,
-    fontWeight: "600",
-    color: "rgb(133, 115, 110)",
   },
   loadingContainer: {
     flexDirection: "row",
@@ -282,17 +278,14 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 14,
-    color: "rgb(133, 115, 110)",
   },
   errorText: {
     fontSize: 14,
-    color: "rgb(220, 38, 38)",
     textAlign: "center",
     paddingVertical: 20,
   },
   emptyText: {
     fontSize: 14,
-    color: "rgb(133, 115, 110)",
     textAlign: "center",
     paddingVertical: 20,
   },

@@ -8,14 +8,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 import { getCurrencyByCode } from "@/data/currencies";
+import { useAppTheme } from "@/providers/AppThemeProvider";
 import { getBalances } from "@/utils/dataManager";
 import { getSettings, subscribeSettings } from "@/utils/settingsManager";
-
-// 主题色彩常量
-const BG_COLOR = "rgb(253, 247, 245)";
-const HEADER_COLOR = "rgb(128, 75, 56)";
-const DIVIDER_COLOR = "rgb(239, 222, 216)";
-const DARK_GRAY = "rgba(54, 48, 46, 1)";
 
 /**
  * 数值保留两位小数（避免浮点误差）
@@ -46,6 +41,7 @@ function formatCurrencyAmount(symbol: string, value: number): string {
 }
 
 export default function BalanceSummaryCard() {
+  const { theme } = useAppTheme();
   const [currencyCodes, setCurrencyCodes] = useState<string[]>(["USD"]);
   const [balances, setBalances] = useState<Record<string, number>>({});
 
@@ -141,16 +137,34 @@ export default function BalanceSummaryCard() {
   }, [balances, currencyCodes]);
 
   return (
-    <View style={styles.card}>
-      <Text style={styles.title}>Total Balance</Text>
+    <View
+      style={[
+        styles.card,
+        {
+          borderColor: theme.cardBorder,
+          backgroundColor: theme.cardBg,
+        },
+      ]}
+    >
+      <Text style={[styles.title, { color: theme.textPrimary }]}>
+        Total Balance
+      </Text>
       <View style={{ height: 10 }} />
       {rows.map((row, index) => (
         <View key={row.code}>
           <View style={styles.rowContainer}>
-            <Text style={styles.rowCode}>{row.code}:</Text>
-            <Text style={styles.rowAmount}>{row.amountText}</Text>
+            <Text style={[styles.rowCode, { color: theme.accent }]}>
+              {row.code}:
+            </Text>
+            <Text style={[styles.rowAmount, { color: theme.accent }]}>
+              {row.amountText}
+            </Text>
           </View>
-          {index < rows.length - 1 && <View style={styles.divider} />}
+          {index < rows.length - 1 && (
+            <View
+              style={[styles.divider, { backgroundColor: theme.divider }]}
+            />
+          )}
         </View>
       ))}
     </View>
@@ -161,15 +175,12 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 14,
     borderWidth: 2,
-    borderColor: DIVIDER_COLOR,
-    backgroundColor: BG_COLOR,
     paddingVertical: 16,
     paddingHorizontal: 20,
   },
   title: {
     fontSize: 16,
     fontWeight: "600",
-    color: DARK_GRAY,
   },
   rowContainer: {
     flexDirection: "row",
@@ -179,17 +190,14 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: DIVIDER_COLOR,
     marginTop: 6,
   },
   rowCode: {
     fontSize: 26,
     fontWeight: "800",
-    color: HEADER_COLOR,
   },
   rowAmount: {
     fontSize: 26,
     fontWeight: "800",
-    color: HEADER_COLOR,
   },
 });

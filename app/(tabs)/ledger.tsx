@@ -9,7 +9,6 @@ import {
   Keyboard,
   PanResponder,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -23,6 +22,7 @@ import {
   IconTilePicker,
   type IconTilePickerValue,
 } from "@/components/IconTilePicker";
+import { useAppTheme } from "@/providers/AppThemeProvider";
 import { addTransaction, generateUUID } from "@/utils/dataManager";
 import { getSettings, subscribeSettings } from "@/utils/settingsManager";
 
@@ -54,15 +54,6 @@ function toRfc3339Local(date: Date): string {
   return `${year}-${month}-${day}T${hour}:${minute}:${second}.${ms}${sign}${offH}:${offM}`;
 }
 
-// 主题色彩常量
-const COLORS = {
-  background: "rgb(253, 247, 245)",
-  segmentBg: "rgb(246, 233, 228)",
-  active: "rgb(128, 75, 56)",
-  inactiveText: "rgb(133, 115, 110)",
-  activeText: "#fff",
-};
-
 // 分段控件尺寸常量
 const SEGMENTED = {
   height: 52,
@@ -80,9 +71,16 @@ type SegmentedValue = 0 | 1 | 2;
 function LedgerTypeSegmented({
   value,
   onChange,
+  colors,
 }: {
   value: SegmentedValue;
   onChange: (next: SegmentedValue) => void;
+  colors: {
+    segmentBg: string;
+    active: string;
+    inactiveText: string;
+    activeText: string;
+  };
 }) {
   const { width: windowWidth } = useWindowDimensions();
   // 动画位置状态
@@ -169,7 +167,10 @@ function LedgerTypeSegmented({
 
   return (
     <View
-      style={[styles.segmented, { width: segmentedWidth }]}
+      style={[
+        styles.segmented,
+        { width: segmentedWidth, backgroundColor: colors.segmentBg },
+      ]}
       {...panResponder.panHandlers}
     >
       {/* 滑动指示器 */}
@@ -179,6 +180,7 @@ function LedgerTypeSegmented({
           styles.segmentIndicator,
           {
             width: indicatorWidth,
+            backgroundColor: colors.active,
             transform: [{ translateX: indicatorTranslateX as any }],
           },
         ]}
@@ -188,7 +190,9 @@ function LedgerTypeSegmented({
         <Text
           style={[
             styles.segmentText,
-            value === 0 ? styles.segmentTextActive : styles.segmentTextInactive,
+            value === 0
+              ? [styles.segmentTextActive, { color: colors.activeText }]
+              : [styles.segmentTextInactive, { color: colors.inactiveText }],
           ]}
         >
           Expense
@@ -198,7 +202,9 @@ function LedgerTypeSegmented({
         <Text
           style={[
             styles.segmentText,
-            value === 1 ? styles.segmentTextActive : styles.segmentTextInactive,
+            value === 1
+              ? [styles.segmentTextActive, { color: colors.activeText }]
+              : [styles.segmentTextInactive, { color: colors.inactiveText }],
           ]}
         >
           Income
@@ -208,7 +214,9 @@ function LedgerTypeSegmented({
         <Text
           style={[
             styles.segmentText,
-            value === 2 ? styles.segmentTextActive : styles.segmentTextInactive,
+            value === 2
+              ? [styles.segmentTextActive, { color: colors.activeText }]
+              : [styles.segmentTextInactive, { color: colors.inactiveText }],
           ]}
         >
           Exchange
@@ -219,6 +227,7 @@ function LedgerTypeSegmented({
 }
 
 export default function LedgerTab() {
+  const { theme } = useAppTheme();
   // 分段选择器的当前值：0-支出, 1-收入, 2-换汇
   const [selected, setSelected] = useState<SegmentedValue>(0);
   // 选中的图标分类
@@ -449,9 +458,18 @@ export default function LedgerTab() {
   ]);
 
   return (
-    <View style={styles.container}>
-      <LedgerTypeSegmented value={selected} onChange={setSelected} />
-      <View style={styles.divider} />
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <LedgerTypeSegmented
+        value={selected}
+        onChange={setSelected}
+        colors={{
+          segmentBg: theme.surfaceAlt,
+          active: theme.accent,
+          inactiveText: theme.textSecondary,
+          activeText: theme.textOnAccent,
+        }}
+      />
+      <View style={[styles.divider, { backgroundColor: theme.divider }]} />
 
       {/* 金额与币种输入 */}
       <CurrencyAmountInput
@@ -469,7 +487,7 @@ export default function LedgerTab() {
       {selected === 2 ? (
         <>
           <View style={styles.exchangeArrowContainer}>
-            <Text style={styles.exchangeArrow}>↓</Text>
+            <Text style={[styles.exchangeArrow, { color: theme.accent }]}>↓</Text>
           </View>
           <CurrencyAmountInput
             currencyCode={currencyCode2}
@@ -482,17 +500,33 @@ export default function LedgerTab() {
         </>
       ) : null}
 
-      <View style={[styles.divider, styles.dividerNoTopMargin]} />
+      <View
+        style={[
+          styles.divider,
+          styles.dividerNoTopMargin,
+          { backgroundColor: theme.divider },
+        ]}
+      />
       {selected !== 2 ? (
         <>
           {/* 分类选择（非换汇） */}
-          <Text style={styles.categoryLabel}>Select Category</Text>
+          <Text style={[styles.categoryLabel, { color: theme.textSecondary }]}>
+            Select Category
+          </Text>
           <IconTilePicker value={selectedTile} onChange={setSelectedTile} />
-          <View style={[styles.divider, styles.dividerNoTopMargin]} />
+          <View
+            style={[
+              styles.divider,
+              styles.dividerNoTopMargin,
+              { backgroundColor: theme.divider },
+            ]}
+          />
         </>
       ) : null}
       {/* 日期时间选择 */}
-      <Text style={styles.categoryLabel}>Select Date</Text>
+      <Text style={[styles.categoryLabel, { color: theme.textSecondary }]}>
+        Select Date
+      </Text>
       <DateTimePicker
         year={year}
         month={month}
@@ -505,17 +539,27 @@ export default function LedgerTab() {
         onHourChange={setHour}
         onMinuteChange={setMinute}
       />
-      <View style={[styles.divider, styles.dividerNoTopMargin]} />
+      <View
+        style={[
+          styles.divider,
+          styles.dividerNoTopMargin,
+          { backgroundColor: theme.divider },
+        ]}
+      />
 
       {/* 备注输入 */}
-      <Text style={styles.categoryLabel}>Description</Text>
-      <View style={styles.descriptionContainer}>
+      <Text style={[styles.categoryLabel, { color: theme.textSecondary }]}>
+        Description
+      </Text>
+      <View
+        style={[styles.descriptionContainer, { backgroundColor: theme.surfaceAlt }]}
+      >
         <TextInput
           value={description}
           onChangeText={setDescription}
           placeholder="Add a note"
-          placeholderTextColor={COLORS.inactiveText}
-          style={styles.descriptionInput}
+          placeholderTextColor={theme.inputPlaceholder}
+          style={[styles.descriptionInput, { color: theme.inputText }]}
           returnKeyType="done"
           multiline={false}
           scrollEnabled={false}
@@ -527,13 +571,14 @@ export default function LedgerTab() {
       <Pressable
         style={({ pressed }) => [
           styles.submitButton,
+          { backgroundColor: theme.buttonPrimaryBg },
           !canSubmit ? styles.submitButtonDisabled : null,
           pressed && canSubmit ? styles.submitButtonPressed : null,
         ]}
         onPress={onSubmit}
         disabled={!canSubmit}
       >
-        <Text style={styles.submitButtonText}>
+        <Text style={[styles.submitButtonText, { color: theme.buttonPrimaryText }]}>
           {submitting ? "Submitting..." : "Submit Record"}
         </Text>
       </Pressable>
@@ -541,7 +586,7 @@ export default function LedgerTab() {
       {descriptionFocused && keyboardHeight > 0 ? (
         <>
           <Pressable
-            style={styles.keyboardDimmer}
+            style={[styles.keyboardDimmer, { backgroundColor: theme.overlay }]}
             onPress={Keyboard.dismiss}
             accessible={false}
           />
@@ -549,12 +594,20 @@ export default function LedgerTab() {
             pointerEvents="none"
             style={[styles.keyboardPreview, { bottom: keyboardHeight }]}
           >
-            <View style={styles.keyboardPreviewInner}>
+            <View
+              style={[
+                styles.keyboardPreviewInner,
+                {
+                  backgroundColor: theme.surfaceAlt,
+                  borderColor: theme.accent,
+                },
+              ]}
+            >
               <Text
                 style={
                   description.length > 0
-                    ? styles.keyboardPreviewText
-                    : styles.keyboardPreviewPlaceholder
+                    ? [styles.keyboardPreviewText, { color: theme.inputText }]
+                    : [styles.keyboardPreviewPlaceholder, { color: theme.textSecondary }]
                 }
                 numberOfLines={1}
               >
@@ -571,7 +624,6 @@ export default function LedgerTab() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
   },
   segmented: {
     alignSelf: "center",
@@ -580,7 +632,6 @@ const styles = StyleSheet.create({
     height: SEGMENTED.height,
     padding: SEGMENTED.padding,
     borderRadius: SEGMENTED.radius,
-    backgroundColor: COLORS.segmentBg,
     flexDirection: "row",
     overflow: "hidden",
   },
@@ -589,7 +640,6 @@ const styles = StyleSheet.create({
     left: SEGMENTED.padding,
     top: SEGMENTED.padding,
     bottom: SEGMENTED.padding,
-    backgroundColor: COLORS.active,
     borderRadius: SEGMENTED.radius - SEGMENTED.padding,
   },
   segmentButton: {
@@ -601,15 +651,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
   },
-  segmentTextActive: {
-    color: COLORS.activeText,
-  },
-  segmentTextInactive: {
-    color: COLORS.inactiveText,
-  },
+  segmentTextActive: {},
+  segmentTextInactive: {},
   divider: {
     height: 2,
-    backgroundColor: "rgb(239, 222, 216)",
     marginTop: 16,
     alignSelf: "stretch",
     width: "100%",
@@ -625,7 +670,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     fontSize: 16,
     fontWeight: "600",
-    color: COLORS.inactiveText,
     textAlign: "left",
   },
   descriptionContainer: {
@@ -633,7 +677,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     marginHorizontal: 16,
     borderRadius: 14,
-    backgroundColor: COLORS.segmentBg,
     height: 48,
     paddingHorizontal: 12,
     justifyContent: "center",
@@ -641,7 +684,6 @@ const styles = StyleSheet.create({
   descriptionInput: {
     fontSize: 16,
     lineHeight: 20,
-    color: "#000",
     paddingVertical: 0,
     paddingHorizontal: 0,
     height: 48,
@@ -657,32 +699,26 @@ const styles = StyleSheet.create({
   },
   keyboardPreviewInner: {
     borderRadius: 14,
-    backgroundColor: COLORS.segmentBg,
     borderWidth: 2,
-    borderColor: COLORS.active,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
   keyboardPreviewText: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#000",
   },
   keyboardPreviewPlaceholder: {
     fontSize: 16,
     fontWeight: "700",
-    color: COLORS.inactiveText,
   },
   keyboardDimmer: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.7)",
   },
   submitButton: {
     marginTop: 10,
     marginHorizontal: 16,
     height: 52,
     borderRadius: 14,
-    backgroundColor: COLORS.active,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -695,7 +731,6 @@ const styles = StyleSheet.create({
   submitButtonText: {
     fontSize: 18,
     fontWeight: "800",
-    color: COLORS.activeText,
   },
   exchangeArrowContainer: {
     alignItems: "center",
@@ -705,6 +740,5 @@ const styles = StyleSheet.create({
   exchangeArrow: {
     fontSize: 32,
     fontWeight: "700",
-    color: COLORS.active,
   },
 });

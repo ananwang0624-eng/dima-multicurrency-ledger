@@ -14,6 +14,7 @@ import { SvgUri } from "react-native-svg";
 
 import { getCurrencyByCode } from "@/data/currencies";
 import { ICON_TILE_ITEMS } from "@/data/iconTileItems";
+import { useAppTheme } from "@/providers/AppThemeProvider";
 import type { TransactionRecord } from "@/utils/dataManager";
 
 type Props = {
@@ -75,6 +76,7 @@ export default function TransactionRecordItem({
   onPress,
   testID,
 }: Props) {
+  const { theme } = useAppTheme();
   // 解析分类图标
   const categoryItem = useMemo(() => {
     return (
@@ -98,7 +100,7 @@ export default function TransactionRecordItem({
     return formatCurrencyAmount(symbol, signed);
   }, [record.amount, record.currency, record.type]);
 
-  const amountColor = record.type === "income" ? COLORS.income : COLORS.expense;
+  const amountColor = record.type === "income" ? theme.success : theme.textPrimary;
 
   return (
     <Pressable
@@ -108,6 +110,10 @@ export default function TransactionRecordItem({
       onPress={onPress}
       style={({ pressed }) => [
         styles.container,
+        {
+          backgroundColor: theme.cardBg,
+          borderColor: theme.cardBorder,
+        },
         pressed && onPress ? styles.pressed : null,
         style,
       ]}
@@ -115,22 +121,26 @@ export default function TransactionRecordItem({
       <View
         style={[
           styles.leftIconCircle,
-          { backgroundColor: categoryItem.bgColor },
+          {
+            backgroundColor:
+              theme.categoryTileBgColors[categoryItem.value] ??
+              categoryItem.bgColor,
+          },
         ]}
       >
         <SvgUri
           uri={categoryItem.uri}
           width={28}
           height={28}
-          color={COLORS.iconTint}
+          color={theme.accent}
         />
       </View>
 
       <View style={styles.textBlock}>
-        <Text style={styles.description} numberOfLines={1}>
+        <Text style={[styles.description, { color: theme.textPrimary }]} numberOfLines={1}>
           {descriptionText}
         </Text>
-        <Text style={styles.time} numberOfLines={1}>
+        <Text style={[styles.time, { color: theme.accent }]} numberOfLines={1}>
           {timeText}
         </Text>
       </View>
@@ -142,25 +152,13 @@ export default function TransactionRecordItem({
   );
 }
 
-const COLORS = {
-  pageBg: "rgb(253, 247, 245)",
-  divider: "rgb(239, 222, 216)",
-  iconTint: "rgb(128, 75, 56)",
-  description: "rgb(32, 24, 23)",
-  expense: "rgb(32, 24, 23)",
-  income: "rgb(22, 163, 74)",
-  time: "rgb(128, 75, 56)",
-} as const;
-
 const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "center",
     gap: 16,
-    backgroundColor: COLORS.pageBg,
     borderRadius: 14,
     borderWidth: 2,
-    borderColor: COLORS.divider,
     paddingVertical: 16,
     paddingHorizontal: 16,
   },
@@ -180,13 +178,11 @@ const styles = StyleSheet.create({
   description: {
     fontSize: 18,
     fontWeight: "700",
-    color: COLORS.description,
   },
   time: {
     marginTop: 2,
     fontSize: 14,
     fontWeight: "600",
-    color: COLORS.time,
   },
   amount: {
     fontSize: 18,

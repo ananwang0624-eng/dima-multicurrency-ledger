@@ -38,12 +38,14 @@ describe("settings flow integration tests", () => {
       defaultCurrencyCode: "USD",
       bookkeepingCurrencyCode: "USD",
       bookkeepingCurrencyCodes: ["USD"],
+      themeMode: "light",
       version: 2,
     });
     mockSetDefaultCurrencyCode.mockResolvedValue({
       defaultCurrencyCode: "EUR",
       bookkeepingCurrencyCode: "USD",
       bookkeepingCurrencyCodes: ["USD"],
+      themeMode: "light",
       version: 2,
     });
   });

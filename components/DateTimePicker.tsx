@@ -1,7 +1,3 @@
-/**
- * 日期时间选择器组件
- * 支持选择年、月、日、时、分，使用滚轮式界面
- */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FlatList,
@@ -14,36 +10,18 @@ import {
   type ViewStyle,
 } from "react-native";
 
-// 主题色彩常量
-const COLORS = {
-  background: "rgb(253, 247, 245)",
-  panelBg: "rgb(246, 233, 228)",
-  active: "rgb(128, 75, 56)",
-  inactiveText: "rgb(133, 115, 110)",
-  divider: "rgb(239, 222, 216)",
-  overlay: "rgba(0,0,0,0.25)",
-} as const;
+import { useAppTheme } from "@/providers/AppThemeProvider";
 
 type DateTimeField = "year" | "month" | "day" | "hour" | "minute";
 
-/**
- * 数字补零
- */
 function pad2(n: number) {
   return String(n).padStart(2, "0");
 }
 
-/**
- * 计算指定年月的天数
- */
 function daysInMonth(year: number, month: number) {
-  // month: 1-12
   return new Date(year, month, 0).getDate();
 }
 
-/**
- * 生成连续数字数组（包含边界）
- */
 function rangeInclusive(start: number, end: number) {
   const out: number[] = [];
   for (let i = start; i <= end; i += 1) out.push(i);
@@ -65,6 +43,7 @@ function WheelPicker({
   itemHeight?: number;
   visibleCount?: number;
 }) {
+  const { theme } = useAppTheme();
   const listRef = useRef<FlatList<number>>(null);
   const containerHeight = itemHeight * visibleCount;
   const paddingVertical = (containerHeight - itemHeight) / 2;
@@ -75,26 +54,11 @@ function WheelPicker({
   }, [selectedValue, values]);
 
   useEffect(() => {
-    // 保持滚轮与外部受控值一致
     listRef.current?.scrollToOffset({
       offset: selectedIndex * itemHeight,
       animated: false,
     });
   }, [itemHeight, selectedIndex]);
-
-  const onMomentumEnd = useCallback(
-    (offsetY: number) => {
-      // 根据滚动位置取最近值
-      const rawIndex = offsetY / itemHeight;
-      const nextIndex = Math.round(rawIndex);
-      const clampedIndex = Math.max(0, Math.min(values.length - 1, nextIndex));
-      const nextValue = values[clampedIndex];
-      if (nextValue !== undefined && nextValue !== selectedValue) {
-        onValueChange(nextValue);
-      }
-    },
-    [itemHeight, onValueChange, selectedValue, values],
-  );
 
   const renderItem = useCallback(
     ({ item }: ListRenderItemInfo<number>) => {
@@ -104,9 +68,7 @@ function WheelPicker({
           <Text
             style={[
               styles.wheelItemText,
-              isSelected
-                ? styles.wheelItemTextSelected
-                : styles.wheelItemTextIdle,
+              { color: isSelected ? theme.accent : theme.textSecondary },
             ]}
           >
             {format(item)}
@@ -114,7 +76,7 @@ function WheelPicker({
         </View>
       );
     },
-    [format, itemHeight, selectedValue],
+    [format, itemHeight, selectedValue, theme.accent, theme.textSecondary],
   );
 
   return (
@@ -128,7 +90,7 @@ function WheelPicker({
         snapToInterval={itemHeight}
         decelerationRate="fast"
         disableIntervalMomentum
-        nestedScrollEnabled={true}
+        nestedScrollEnabled
         contentContainerStyle={{ paddingVertical }}
         getItemLayout={(_, index) => ({
           length: itemHeight,
@@ -136,9 +98,15 @@ function WheelPicker({
           index,
         })}
         initialScrollIndex={selectedIndex}
-        onMomentumScrollEnd={(e) =>
-          onMomentumEnd(e.nativeEvent.contentOffset.y)
-        }
+        onMomentumScrollEnd={(e) => {
+          const rawIndex = e.nativeEvent.contentOffset.y / itemHeight;
+          const nextIndex = Math.round(rawIndex);
+          const clampedIndex = Math.max(0, Math.min(values.length - 1, nextIndex));
+          const nextValue = values[clampedIndex];
+          if (nextValue !== undefined && nextValue !== selectedValue) {
+            onValueChange(nextValue);
+          }
+        }}
         renderItem={renderItem}
       />
 
@@ -149,6 +117,7 @@ function WheelPicker({
           {
             top: paddingVertical,
             height: itemHeight,
+            borderColor: theme.accent,
           },
         ]}
       />
@@ -185,11 +154,11 @@ export function DateTimePicker({
   maxYear?: number;
   style?: ViewStyle;
 }) {
+  const { theme } = useAppTheme();
   const [activeField, setActiveField] = useState<DateTimeField | null>(null);
 
   const maxDay = useMemo(() => daysInMonth(year, month), [year, month]);
 
-  // 当年份/月份变化导致日期越界时，自动回落到最大值
   useEffect(() => {
     if (day > maxDay) onDayChange(maxDay);
   }, [day, maxDay, onDayChange]);
@@ -205,11 +174,6 @@ export function DateTimePicker({
   const hours = useMemo(() => rangeInclusive(0, 23), []);
   const minutes = useMemo(() => rangeInclusive(0, 59), []);
 
-  // 打开/关闭选择器
-  const open = useCallback((field: DateTimeField) => setActiveField(field), []);
-  const close = useCallback(() => setActiveField(null), []);
-
-  // 选择年份时同步修正最大日期
   const onPickYear = useCallback(
     (nextYear: number) => {
       onYearChange(nextYear);
@@ -219,7 +183,6 @@ export function DateTimePicker({
     [day, month, onDayChange, onYearChange],
   );
 
-  // 选择月份时同步修正最大日期
   const onPickMonth = useCallback(
     (nextMonth: number) => {
       onMonthChange(nextMonth);
@@ -307,77 +270,75 @@ export function DateTimePicker({
     years,
   ]);
 
+  const renderBox = (field: DateTimeField, label: string, valueText: string) => (
+    <Pressable
+      style={({ pressed }) => [
+        styles.box,
+        {
+          backgroundColor: theme.cardBg,
+          borderColor: pressed ? theme.accent : theme.cardBorder,
+          opacity: pressed ? 0.9 : 1,
+        },
+      ]}
+      onPress={() => setActiveField(field)}
+    >
+      <Text style={[styles.boxLabel, { color: theme.textSecondary }]}>
+        {label}
+      </Text>
+      <Text style={[styles.boxText, { color: theme.accent }]}>{valueText}</Text>
+    </Pressable>
+  );
+
   return (
     <View style={[styles.row, style]}>
-      {/* 日期时间字段 */}
-      <Pressable
-        style={({ pressed }) => [
-          styles.box,
-          pressed ? styles.boxPressed : null,
-        ]}
-        onPress={() => open("year")}
-      >
-        <Text style={styles.boxLabel}>year</Text>
-        <Text style={styles.boxText}>{String(year)}</Text>
-      </Pressable>
-      <Pressable
-        style={({ pressed }) => [
-          styles.box,
-          pressed ? styles.boxPressed : null,
-        ]}
-        onPress={() => open("month")}
-      >
-        <Text style={styles.boxLabel}>month</Text>
-        <Text style={styles.boxText}>{pad2(month)}</Text>
-      </Pressable>
-      <Pressable
-        style={({ pressed }) => [
-          styles.box,
-          pressed ? styles.boxPressed : null,
-        ]}
-        onPress={() => open("day")}
-      >
-        <Text style={styles.boxLabel}>day</Text>
-        <Text style={styles.boxText}>{pad2(Math.min(day, maxDay))}</Text>
-      </Pressable>
-      <Pressable
-        style={({ pressed }) => [
-          styles.box,
-          pressed ? styles.boxPressed : null,
-        ]}
-        onPress={() => open("hour")}
-      >
-        <Text style={styles.boxLabel}>hour</Text>
-        <Text style={styles.boxText}>{pad2(hour)}</Text>
-      </Pressable>
-      <Pressable
-        style={({ pressed }) => [
-          styles.box,
-          pressed ? styles.boxPressed : null,
-        ]}
-        onPress={() => open("minute")}
-      >
-        <Text style={styles.boxLabel}>min</Text>
-        <Text style={styles.boxText}>{pad2(minute)}</Text>
-      </Pressable>
+      {renderBox("year", "year", String(year))}
+      {renderBox("month", "month", pad2(month))}
+      {renderBox("day", "day", pad2(Math.min(day, maxDay)))}
+      {renderBox("hour", "hour", pad2(hour))}
+      {renderBox("minute", "min", pad2(minute))}
 
       <Modal
         visible={activeField !== null}
         transparent
         animationType="fade"
-        onRequestClose={close}
+        onRequestClose={() => setActiveField(null)}
       >
-        {/* 选择面板 */}
-        <View style={styles.modalOverlay}>
-          <Pressable style={styles.modalBackdrop} onPress={close} />
-          <View style={styles.modalPanel}>
+        <View style={[styles.modalOverlay, { backgroundColor: theme.overlay }]}>
+          <Pressable
+            style={styles.modalBackdrop}
+            onPress={() => setActiveField(null)}
+          />
+          <View
+            style={[
+              styles.modalPanel,
+              {
+                backgroundColor: theme.cardBg,
+                borderTopColor: theme.cardBorder,
+              },
+            ]}
+          >
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{modalTitle}</Text>
-              <Pressable onPress={close} style={styles.doneButton}>
-                <Text style={styles.doneButtonText}>Done</Text>
+              <Text style={[styles.modalTitle, { color: theme.accent }]}>
+                {modalTitle}
+              </Text>
+              <Pressable
+                onPress={() => setActiveField(null)}
+                style={[
+                  styles.doneButton,
+                  {
+                    backgroundColor: theme.surfaceAlt,
+                    borderColor: theme.cardBorder,
+                  },
+                ]}
+              >
+                <Text style={[styles.doneButtonText, { color: theme.accent }]}>
+                  Done
+                </Text>
               </Pressable>
             </View>
-            <View style={styles.modalDivider} />
+            <View
+              style={[styles.modalDivider, { backgroundColor: theme.divider }]}
+            />
             {wheelConfig ? (
               <WheelPicker
                 values={wheelConfig.values}
@@ -405,42 +366,33 @@ const styles = StyleSheet.create({
     minWidth: 0,
     height: 56,
     borderRadius: 14,
-    backgroundColor: COLORS.panelBg,
     borderWidth: 2,
     borderColor: "transparent",
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 6,
   },
-  boxPressed: {
-    opacity: 0.9,
-    borderColor: COLORS.active,
-  },
   boxLabel: {
     fontSize: 11,
     fontWeight: "700",
-    color: COLORS.inactiveText,
     lineHeight: 12,
     marginBottom: 2,
   },
   boxText: {
     fontSize: 16,
     fontWeight: "700",
-    color: COLORS.active,
   },
-
   modalOverlay: {
     flex: 1,
-    backgroundColor: COLORS.overlay,
     justifyContent: "flex-end",
   },
   modalBackdrop: {
     flex: 1,
   },
   modalPanel: {
-    backgroundColor: COLORS.background,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
+    borderTopWidth: 1,
     paddingBottom: 18,
   },
   modalHeader: {
@@ -454,26 +406,22 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 16,
     fontWeight: "700",
-    color: COLORS.inactiveText,
   },
   doneButton: {
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 10,
-    backgroundColor: COLORS.panelBg,
+    borderWidth: 1,
   },
   doneButtonText: {
     fontSize: 14,
     fontWeight: "700",
-    color: COLORS.active,
   },
   modalDivider: {
     height: 2,
-    backgroundColor: COLORS.divider,
     alignSelf: "stretch",
     width: "100%",
   },
-
   wheelContainer: {
     alignSelf: "stretch",
   },
@@ -485,19 +433,12 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "800",
   },
-  wheelItemTextSelected: {
-    color: COLORS.active,
-  },
-  wheelItemTextIdle: {
-    color: COLORS.inactiveText,
-  },
   wheelSelectionFrame: {
     position: "absolute",
     left: 16,
     right: 16,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: COLORS.active,
     backgroundColor: "transparent",
   },
 });

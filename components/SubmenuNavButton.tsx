@@ -2,6 +2,8 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRouter, type Href } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
+import { useAppTheme } from "@/providers/AppThemeProvider";
+
 type Props = {
   title: string;
   subtitle: string;
@@ -18,6 +20,7 @@ export default function SubmenuNavButton({
   testID,
 }: Props) {
   const router = useRouter();
+  const { theme } = useAppTheme();
 
   return (
     <Pressable
@@ -27,42 +30,42 @@ export default function SubmenuNavButton({
       onPress={() => router.push(href)}
       style={({ pressed }) => [
         styles.container,
+        {
+          backgroundColor: theme.cardBg,
+          borderColor: theme.cardBorder,
+        },
         pressed ? styles.pressed : null,
       ]}
     >
-      <View style={styles.leftIconCircle}>
+      <View
+        style={[styles.leftIconCircle, { backgroundColor: theme.iconCircleBg }]}
+      >
         {iconName ? (
-          <Ionicons name={iconName} size={26} color={HEADER_COLOR} />
+          <Ionicons name={iconName} size={26} color={theme.accent} />
         ) : null}
       </View>
 
       <View style={styles.textBlock}>
-        <Text style={styles.title} numberOfLines={1}>
+        <Text style={[styles.title, { color: theme.textPrimary }]} numberOfLines={1}>
           {title}
         </Text>
-        <Text style={styles.subtitle} numberOfLines={1}>
+        <Text style={[styles.subtitle, { color: theme.accent }]} numberOfLines={1}>
           {subtitle}
         </Text>
       </View>
 
-      <Ionicons name="chevron-forward" size={20} color={HEADER_COLOR} />
+      <Ionicons name="chevron-forward" size={20} color={theme.accent} />
     </Pressable>
   );
 }
-
-const HEADER_COLOR = "rgb(128, 75, 56)";
-const DIVIDER_COLOR = "rgb(239, 222, 216)";
-const LEFT_CIRCLE_COLOR = "rgb(245, 218, 208)";
 
 const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "center",
     gap: 16,
-    backgroundColor: "rgb(255, 255, 255)",
     borderRadius: 14,
     borderWidth: 2,
-    borderColor: DIVIDER_COLOR,
     paddingVertical: 16,
     paddingHorizontal: 16,
   },
@@ -73,7 +76,6 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 999,
-    backgroundColor: LEFT_CIRCLE_COLOR,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -83,12 +85,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: "700",
-    color: "rgb(32, 24, 23)",
   },
   subtitle: {
     marginTop: 2,
     fontSize: 14,
     fontWeight: "600",
-    color: HEADER_COLOR,
   },
 });

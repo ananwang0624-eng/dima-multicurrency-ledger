@@ -5,6 +5,7 @@
  */
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+import { type ThemeMode } from "@/constants/theme";
 import { CURRENCIES, getCurrencyByCode } from "@/data/currencies";
 
 /**
@@ -15,6 +16,7 @@ export type AppSettings = {
   defaultCurrencyCode: string; // 默认币种代码（用于汇率转换的目标币种）
   bookkeepingCurrencyCode: string; // 当前选中的记账币种
   bookkeepingCurrencyCodes: string[]; // 启用的记账币种列表
+  themeMode: ThemeMode; // 当前主题模式
 };
 
 const SETTINGS_STORAGE_KEY = "dima:settings:v1";
@@ -25,6 +27,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   defaultCurrencyCode: "USD",
   bookkeepingCurrencyCode: "USD",
   bookkeepingCurrencyCodes: ["USD"],
+  themeMode: "light",
 };
 
 // 设置变更监听器集合
@@ -41,6 +44,7 @@ function normalizeSettings(raw: unknown): AppSettings {
   const defaultCurrencyCode = record.defaultCurrencyCode;
   const bookkeepingCurrencyCode = record.bookkeepingCurrencyCode;
   const bookkeepingCurrencyCodes = record.bookkeepingCurrencyCodes;
+  const themeMode = record.themeMode;
 
   const resolvedDefaultCurrencyCode =
     typeof defaultCurrencyCode === "string" &&
@@ -78,6 +82,7 @@ function normalizeSettings(raw: unknown): AppSettings {
     defaultCurrencyCode: resolvedDefaultCurrencyCode,
     bookkeepingCurrencyCode: resolvedBookkeepingCurrencyCode,
     bookkeepingCurrencyCodes: resolvedBookkeepingCurrencyCodes,
+    themeMode: themeMode === "dark" ? "dark" : "light",
   };
 
   return normalized;
@@ -210,6 +215,15 @@ export async function removeBookkeepingCurrencyCode(
     bookkeepingCurrencyCodes: ensuredCodes,
     bookkeepingCurrencyCode: nextSelected,
   });
+}
+
+/**
+ * 设置应用主题
+ * @param mode 主题模式
+ * @returns 更新后的设置
+ */
+export async function setThemeMode(mode: ThemeMode): Promise<AppSettings> {
+  return updateSettings({ themeMode: mode });
 }
 
 export const __testables = {
