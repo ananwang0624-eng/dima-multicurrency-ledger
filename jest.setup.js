@@ -41,7 +41,12 @@ jest.mock("@react-native-async-storage/async-storage", () =>
 
 jest.mock("@react-navigation/native", () => ({
   useFocusEffect: jest.fn((callback) => {
-    callback();
+    const React = require("react");
+
+    React.useEffect(() => {
+      const cleanup = callback();
+      return cleanup;
+    }, [callback]);
   }),
 }));
 
