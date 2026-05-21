@@ -72,6 +72,7 @@ export default function TabLayout() {
         },
         tabBarStyle: {
           backgroundColor: theme.tabBar,
+          borderTopColor: theme.divider,
         },
       }}
     >
@@ -155,6 +156,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
+    marginRight: 8,
     alignItems: "center",
     justifyContent: "center",
   },
