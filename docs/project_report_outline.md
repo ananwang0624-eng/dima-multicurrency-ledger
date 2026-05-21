@@ -70,9 +70,16 @@ The settings section allows users to configure the currencies used throughout th
 
 ## 2. Application Architecture
 
-The application adopts a local-first architecture centred on lightweight mobile interaction, local persistence, settings management, and exchange-rate support. Rather than relying on a traditional backend-driven structure, the project stores bookkeeping data and user preferences on the device while using an external exchange-rate service only where online data is necessary.
+The application has been designed as a local-first mobile app. Most of the business logic,
+state handling, and persistence are managed directly on the client side, while online access is
+used only for exchange-rate retrieval. This design fits the nature of the project well: bookkeeping
+records, balances, and user preferences should remain available even without continuous network
+connectivity.
 
-Its architecture combines a structured data model, local storage mechanisms, reusable UI components, tab-based navigation, and screen-level business logic for bookkeeping, statistics, exchange analysis, and settings management. These elements work together to provide a consistent user experience while keeping the implementation modular and maintainable.
+The architecture combines local JSON storage, key-value persistence, reusable React Native
+components, tab-based navigation, and a lightweight exchange-rate integration. This approach
+keeps the system relatively simple while still supporting multi-currency bookkeeping, category
+statistics, exchange analysis, and settings management.
 
 
 ### 2.1 Data Management
@@ -81,117 +88,230 @@ This section describes how data is structured and managed within the application
 
 #### 2.1.1 Data Model Design
 
-The data model of the application is organised around a small number of focused entities: transaction records, the local bookkeeping file, application settings, and exchange-rate cache entries. This structure reflects the local-first nature of the project, where most business data is stored and processed directly on the device rather than being delegated to a remote backend.
+The data model is organised around a small set of entities: transaction records, the local
+bookkeeping file, application settings, and exchange-rate cache entries. Since the app does not
+rely on a traditional backend, these structures are designed to work efficiently with local storage
+while still supporting the main use cases of the project.
 
-The design emphasises three qualities. First, the model is sufficiently expressive to support multi-currency bookkeeping, exchange recording, statistical aggregation, and exchange-rate analysis. Second, the model remains lightweight enough for direct storage in local JSON files and key-value storage. Third, each data structure is versioned or normalised so that future extensions can be introduced without breaking previously stored data.
+The chosen model follows a usage-driven approach. Transactions must be easy to insert and read
+by month, balances must be easy to compute and display, settings must be easy to update
+independently from bookkeeping data, and exchange-rate history must be reusable for both
+statistics and suggestion logic. For this reason, the data is split into separate structures instead
+of being stored as one large undifferentiated state object.
 
 #### 2.1.2 Transaction Record Model
 
-The fundamental business entity is the transaction record. Each record stores a unique identifier, a positive numeric amount, a currency code, a category identifier, a timestamp, an optional description, and a type indicating whether the record is an income or an expense. This model is used consistently across overview rendering, balance calculation, statistical aggregation, and exchange recording.
+The transaction record is the core entity of the application. Each record contains a unique
+identifier, a positive amount, a currency code, a category identifier, a date-time string, an
+optional description, and a type indicating whether the record is an income or an expense.
+This same structure is used across record creation, overview rendering, balance calculation,
+statistical aggregation, and exchange handling.
 
-Validation rules are applied before a record is accepted into storage. The implementation verifies that the identifier is present, the amount is finite and greater than zero, the currency code is supported, the category index falls within the permitted range, the date matches a valid ISO 8601 / RFC 3339 format, and the type is one of the supported bookkeeping directions. These constraints ensure that downstream features can rely on a stable and consistent transaction format.
+Before a transaction is accepted into storage, it is validated. The implementation checks that
+the identifier is present, the amount is finite and strictly positive, the currency code is supported,
+the category index is valid, the timestamp follows the ISO 8601 / RFC 3339 format, and the
+type is either `income` or `expense`. This keeps the record format stable and reduces the risk of
+inconsistent bookkeeping data entering the system.
 
 #### 2.1.3 Bookkeeping File Model
 
-All bookkeeping records are stored inside a local JSON file represented by a versioned bookkeeping-file model. In its current form, the file contains three main fields: a schema version, a `transactionsByMonth` object, and a `balances` object. The `transactionsByMonth` structure groups records by `YYYY-MM`, which makes month-based retrieval straightforward and aligns naturally with the overview and statistics pages. The `balances` structure stores the current balance of each supported currency as a direct mapping from currency code to numeric value.
+All bookkeeping data is stored inside a versioned JSON file. In the current implementation, the
+file contains a version number, a `transactionsByMonth` object, and a `balances` object. The
+`transactionsByMonth` field groups transactions under `YYYY-MM` keys, while the `balances`
+field stores the current numeric balance of each supported currency.
 
-This file model supports both operational efficiency and recoverability. When transactions are added, the corresponding monthly group is updated and kept in descending chronological order. At the same time, balances can either be updated incrementally or recomputed from the stored transaction history. The model also includes normalisation logic that upgrades legacy version-1 data into the current version-2 structure, ensuring backward compatibility for previously stored files.
+This structure was chosen because the app works primarily with monthly record browsing and
+currency-level balance summaries. Grouping data by month makes it efficient to retrieve the
+records needed by the overview and statistics pages, while storing balances separately avoids
+having to recompute them every time the user opens the app. At the same time, the file can still
+be normalised and rebuilt from transaction history when needed.
 
 #### 2.1.4 Settings Model
 
-Application preferences are represented through a compact settings model stored separately from bookkeeping records. The settings object includes a schema version, the default currency code used for conversion and statistics, the currently selected bookkeeping currency, the list of enabled bookkeeping currencies, and the selected theme mode. These fields allow the rest of the application to adapt its behaviour and presentation without modifying transactional data.
+The settings model is stored separately from transaction data. It contains the schema version,
+the default currency code, the currently selected bookkeeping currency, the list of enabled
+bookkeeping currencies, and the theme mode. These values influence how transactions are
+entered, converted, displayed, and analysed, but they do not change the bookkeeping records
+themselves.
 
-The settings model is normalised before use so that invalid or duplicated currency codes are removed and at least one valid bookkeeping currency always remains available. This prevents inconsistent application states and ensures that features such as transaction entry, statistics conversion, and dark-mode toggling always operate on valid configuration data.
+Before the settings are used, they are normalised. Unsupported currencies are removed,
+duplicates are filtered out, and at least one valid bookkeeping currency is always preserved.
+This prevents invalid configuration states and allows the rest of the application to assume that
+the active settings are always usable.
 
 #### 2.1.5 Exchange Rate Cache Model
 
-Exchange-rate information is stored through a dedicated cache model designed for lightweight historical analysis. Each cache entry records the base currency, the target currency, a mapping from date strings to exchange rates, the last update timestamp, and the date of the most recent refresh attempt. The date-to-rate mapping uses the `YYYY-MM-DD` format, which makes it suitable for both direct lookup and historical trend calculations.
+Exchange-rate data is stored in a dedicated cache model. Each cache entry contains the base
+currency, the target currency, a mapping from `YYYY-MM-DD` dates to numeric rates, the last
+update timestamp, and the date of the latest refresh attempt. This structure is simple enough to
+store locally, but also expressive enough for historical conversion and trend analysis.
 
-This cache model supports the analytical features of the exchange and statistics pages without requiring constant network access. Historical rates can be reused for monthly and yearly comparisons, category conversion into the default currency, and the calculation of short-term and long-term fluctuation indicators. Because the cache is stored locally and updated incrementally, the application can provide responsive behaviour even when network availability is limited.
+The cache model is used by both the statistics page and the exchange page. It allows the
+application to reuse previously fetched rate data for default-currency conversion, monthly and
+yearly comparisons, and buy/sell-oriented suggestion logic. Because the data is cached locally,
+the app remains responsive even when fresh network data is temporarily unavailable.
 
 ### 2.2 Local Storage Implementation
 
 #### 2.2.1 Expo File System Storage
 
-The main bookkeeping dataset is stored through `expo-file-system` in a local JSON file located in the application documents directory. This approach is well suited to the project because the bookkeeping file contains structured transactional data that benefits from being stored as a single versioned document rather than as multiple unrelated key-value entries. The file stores month-grouped transactions together with per-currency balances, making it possible to reconstruct the state of the bookkeeping system directly from the local file.
+The main bookkeeping dataset is stored using `expo-file-system`. The application creates a
+JSON file inside the documents directory and uses it as the primary persistence layer for
+transactions and balances. This solution works well because the bookkeeping state is naturally
+structured as a versioned document rather than as a set of unrelated key-value entries.
 
-Using file-based storage also keeps the data model explicit and inspectable during development. Reads and writes are performed through the data manager, which acts as the single persistence boundary for transaction insertion, monthly retrieval, balance queries, seeding, and reset operations. This keeps the rest of the application independent from direct file access and concentrates persistence logic in one place.
+All file operations are concentrated in the data manager. Transaction insertion, monthly reads,
+balance reads, file initialisation, and reset operations all go through this layer. This keeps file
+handling isolated from the screen components and gives the application a single persistence
+boundary for the core bookkeeping data.
 
 #### 2.2.2 AsyncStorage
 
-`AsyncStorage` is used for lightweight configuration and cache-oriented data that does not need to be part of the main bookkeeping file. In the current implementation, it stores application settings such as the default currency, enabled bookkeeping currencies, and theme mode. It is also used to persist exchange-rate cache entries for currency pairs, since these entries are naturally independent and can be updated separately from transactional bookkeeping data.
+`AsyncStorage` is used for lightweight configuration and cache data. In this project, it stores
+application settings such as the default currency, enabled bookkeeping currencies, and theme
+mode. It is also used to persist exchange-rate cache entries, since those entries are naturally
+independent and do not need to be embedded into the main bookkeeping file.
 
-This separation between file storage and key-value storage matches the different lifecycles of the stored information. Transaction and balance data form the durable financial core of the application, while settings and exchange-rate cache entries are smaller pieces of state that are read and updated independently. The result is a persistence strategy that is both simple and aligned with the responsibilities of each data category.
+This separation was chosen deliberately. Transaction and balance data represent the financial
+core of the app and are therefore stored as a versioned file, while settings and exchange-rate
+cache entries are smaller units of state that are read and updated independently. This gives the
+project a simple but well-structured persistence strategy.
 
 #### 2.2.3 Data Initialization and Migration
 
-At application startup, the local bookkeeping file is initialised automatically if it does not yet exist. A default version-2 file is created with an empty `transactionsByMonth` structure and zeroed balances for all supported currencies. This ensures that all screens can assume the existence of a valid local data file from the beginning of the application lifecycle.
+When the application starts, it checks whether the bookkeeping file already exists. If not, a
+default version-2 file is created with empty monthly records and zero balances for all supported
+currencies. This guarantees that the rest of the application can safely assume the presence of a
+valid local bookkeeping file.
 
-Migration and normalisation logic are also applied when existing data is loaded. Legacy version-1 bookkeeping data is upgraded into the current version-2 format, and stored settings are normalised so that invalid currencies, duplicated entries, or incomplete values are corrected before being used. Similar normalisation is applied to exchange-rate data at retrieval time. This migration strategy reduces the risk of runtime inconsistencies and allows the storage schema to evolve without invalidating previously saved user data.
+Migration and normalisation are also part of the persistence layer. Legacy version-1 bookkeeping
+data is upgraded to the current version-2 structure, and settings data is normalised before use.
+This approach allows the storage format to evolve over time without forcing the application to
+discard older user data.
 
 ### 2.3 External Services
 
 #### 2.3.1 Frankfurter Exchange Rate API
 
-The only external online service used by the application is the Frankfurter exchange-rate API. It is responsible for providing historical and up-to-date currency conversion data used by the exchange page and the statistics module. The API is particularly suitable for the project because it is free to use, does not require an API key, and supports historical time-series queries, which are essential for trend calculation and rate-position analysis.
+The application uses the Frankfurter exchange-rate API to retrieve currency conversion data.
+This service is used only for the parts of the app that require online financial information, namely
+historical conversion, rate comparison, and exchange analysis. Frankfurter was chosen because it
+is free, does not require an API key, and supports historical time-series requests.
 
-The application queries Frankfurter with a bookkeeping currency as the base currency and the selected default currency as the target currency. The returned results are converted into a local date-to-rate mapping that can later be reused for both visualisation and numerical analysis inside the app.
+The app requests rates by specifying one bookkeeping currency as the base currency and the
+selected default currency as the target currency. The returned data is then transformed into a
+local date-to-rate mapping that can be reused across the exchange and statistics modules.
 
 #### 2.3.2 API Caching Strategy
 
-Exchange-rate retrieval follows a cache-first strategy. When the application needs exchange-rate data, it first checks locally stored entries in `AsyncStorage`. Cached results are used immediately when available so that the user interface can render without unnecessary waiting or visual flicker. After that, the application performs a background refresh to fetch any missing or newer data from the API.
+Exchange-rate retrieval follows a cache-first strategy. When the app needs rate data, it first
+checks `AsyncStorage` for a previously saved entry. If cached data is available, it is used
+immediately so that the interface can render without unnecessary waiting. After that, the app
+attempts to refresh the data in the background.
 
-The cache keeps approximately one year of rate history for each currency pair. This range is sufficient for the implemented monthly and yearly rating logic, daily/weekly/monthly fluctuation analysis, and default-currency conversion for historical bookkeeping records. Because only missing dates are requested when possible, the implementation avoids repeated full downloads and keeps network usage limited.
+The cache keeps about one year of history for each currency pair. This is enough to support the
+implemented monthly and yearly rating logic, daily/weekly/monthly fluctuation analysis, and
+historical conversion in the statistics page. Because only missing or outdated data needs to be
+fetched, the number of API requests remains limited.
 
 #### 2.3.3 Network Failure Handling
 
-Network-dependent operations are isolated to the exchange-rate subsystem, and failures are handled defensively. If the API request fails, previously cached data can still be displayed when available, allowing the exchange page and statistics page to remain partially functional instead of failing completely. Error states are surfaced to the user through screen-level messages when fresh data cannot be loaded.
+Network failure handling is isolated to the exchange-rate subsystem. If an API request fails, the
+application can still fall back to previously cached data when such data exists. This allows the
+exchange page and statistics page to remain usable instead of failing completely.
 
-This behaviour is important for a local-first application, since bookkeeping itself should not depend on continuous connectivity. Users can continue recording transactions, viewing balances, and browsing stored history even when exchange-rate refreshes fail temporarily. In this way, online exchange support enhances the application without becoming a hard dependency for the core bookkeeping workflow.
+This behaviour is especially important in a local-first application. Core bookkeeping operations,
+such as entering transactions, reading balances, and browsing history, should continue to work
+even without network connectivity. Exchange-rate access is therefore treated as an enhancement
+to the local experience rather than as a strict requirement for the whole app.
 
 ### 2.4 Dependencies
 
-The project is built on the Expo and React Native ecosystem. Core application structure and navigation rely on `expo`, `react`, `react-native`, and `expo-router`, while tab navigation behaviour is supported by the React Navigation packages. Local persistence depends primarily on `expo-file-system` for bookkeeping data and `@react-native-async-storage/async-storage` for settings and cached exchange-rate entries.
+The application is developed with React Native and Expo, which provide the core runtime,
+cross-platform support, and development workflow. A small number of additional dependencies
+are used to support navigation, persistence, visualisation, theming, and testing. The main
+dependencies are listed below:
 
-Several additional libraries support user-facing features and implementation quality. `expo-crypto` is used for UUID generation, `react-native-svg` and the SVG transformer support icon assets, and `react-native-gifted-charts` is used for statistical and exchange-rate chart rendering. On the development side, TypeScript provides static typing, while Jest and React Native Testing Library support the automated unit, component, and integration tests described later in the report.
+- `expo` — Provides the managed development workflow and access to a large set of mobile APIs.
+- `react-native` — Supplies the core mobile framework used to build the application interface and logic.
+- `react` — Powers the component-based rendering model and state-driven UI updates.
+- `expo-router` — Implements file-based routing and the main navigation structure of the application.
+- `@react-navigation/native` and `@react-navigation/bottom-tabs` — Support navigation state and tab-based interaction.
+- `expo-file-system` — Stores the main bookkeeping JSON file on the device.
+- `@react-native-async-storage/async-storage` — Stores settings and exchange-rate cache entries.
+- `expo-crypto` — Generates UUID values for transaction records.
+- `react-native-svg` and `react-native-svg-transformer` — Support SVG-based icon assets.
+- `react-native-gifted-charts` — Provides chart components for statistical and exchange-rate visualisation.
+- `typescript` — Adds static typing to improve correctness and maintainability.
+- `jest`, `jest-expo`, and `@testing-library/react-native` — Support the automated testing strategy used in the project.
 
 ### 2.5 Component Architecture
 
 #### 2.5.1 Layout and Navigation Components
 
-The overall screen structure is organised through Expo Router layouts. The root layout is responsible for global application initialisation and shared navigation behaviour, while the tab layout defines the main bottom-tab navigation used for the Overview, Bookkeeping, Statistics, Exchange, and Settings pages. This arrangement separates app-wide concerns from tab-specific structure and keeps the navigation hierarchy easy to understand.
+The main screen structure is organised through Expo Router layouts. The root layout handles
+application initialisation and shared navigation behaviour, while the tab layout defines the five
+main pages of the app: Overview, Bookkeeping, Statistics, Exchange, and Settings.
 
-Within the screen content itself, lightweight layout-oriented components are used to organise visual sections and repeated navigation affordances. For example, settings-related navigation entries are encapsulated in reusable submenu buttons rather than being rebuilt manually on each screen.
+This structure separates global navigation concerns from screen-specific content. In addition,
+small reusable layout-oriented elements, such as settings navigation buttons, are encapsulated as
+components so that repeated structures do not need to be rebuilt manually on each page.
 
 #### 2.5.2 Input Components
 
-Input-oriented components are responsible for collecting the main data required during bookkeeping. `CurrencyAmountInput` combines currency selection with numeric amount entry, while text input areas on the bookkeeping page capture optional transaction descriptions. These components are designed to keep data entry compact and mobile-friendly, especially on the screen where users most frequently interact with the app.
+Input components are used mainly on the bookkeeping page, where the user enters the details of
+new records. The most important input element is `CurrencyAmountInput`, which combines
+currency selection and amount entry in a single compact control. Additional text input is used for
+optional record descriptions.
 
-The input layer focuses on combining usability with controlled state updates. Rather than allowing each screen to reimplement formatting and interaction logic independently, input components encapsulate details such as placeholder handling, numeric entry behaviour, and currency selection integration.
+The goal of this layer is to keep data entry concise and consistent. Instead of implementing the
+same formatting and interaction logic directly inside screens, these behaviours are encapsulated
+inside reusable input components.
 
 #### 2.5.3 Picker Components
 
-Picker components are used extensively throughout the application to represent small but important domain choices. `MonthYearPicker` supports month-based history browsing, `DateTimePicker` allows explicit transaction time selection, `OptionPicker` is used for exchange-page range selection, and `TransactionTypeSelector` supports switching between income and expense statistics. Together, these components form a reusable picker layer shared across multiple screens.
+Picker components are used throughout the app to represent small but important domain
+selections. `MonthYearPicker` is used for monthly browsing, `DateTimePicker` is used during
+transaction entry, `OptionPicker` is used on the exchange page, and `TransactionTypeSelector`
+is used on the statistics page.
 
-Their common design language helps maintain consistency in both interaction and appearance. Each picker exposes a focused selection task while encapsulating modal display, wheel-style selection behaviour, and controlled callbacks to the parent screen.
+These components follow a common interaction pattern based on modal selection and controlled
+callbacks. This gives the application a more coherent interaction style and avoids duplicating
+selection logic across different screens.
 
 #### 2.5.4 Chart Components
 
-Chart-related components provide the visual analytics layer of the project. `ExpenseCategoryPieChart` aggregates transaction values into category-based proportions after conversion into the default currency, while `ExchangeRateCard` and its internal bar chart visualisation summarise rate movement and current recommendation state. These components turn stored bookkeeping and exchange-rate data into information that can be interpreted quickly by the user.
+Chart components provide the visual analysis layer of the application. `ExpenseCategoryPieChart`
+shows category-level distributions after conversion into the default currency, while
+`ExchangeRateCard` and the related bar-chart visualisation summarise exchange-rate history,
+trend direction, and suggestion level.
 
-The chart layer is intentionally separated from page logic so that data preparation and data presentation remain distinct. Screens are responsible for supplying already selected or aggregated data, while the chart components focus on rendering, legends, totals, and contextual visual cues.
+This part of the architecture separates data preparation from data presentation. Screens prepare
+the relevant records or rate history, and the chart components focus on visual rendering, totals,
+legends, and compact analytical feedback.
 
 #### 2.5.5 List Item Components
 
-List-item components encapsulate the rendering of repeated records and summaries. The most representative example is `TransactionRecordItem`, which displays the category icon, description, timestamp, and signed amount for each transaction shown on the overview page. By isolating this repeated visual unit, the application keeps monthly transaction rendering clear and easier to maintain.
+List-item components encapsulate repeated visual units that appear in transaction browsing and
+settings navigation. The clearest example is `TransactionRecordItem`, which renders the icon,
+description, timestamp, and signed amount for each bookkeeping record shown on the overview
+page.
 
-This category of components is important because lists appear frequently in bookkeeping interfaces. A dedicated list-item layer reduces duplication and ensures that spacing, colour usage, icon handling, and signed amount formatting remain consistent across repeated records.
+This separation is useful because bookkeeping interfaces often display many repeated entries.
+A dedicated list-item layer reduces duplication and keeps spacing, formatting, and visual
+structure consistent across the application.
 
 #### 2.5.6 Settings Components
 
-Settings-related components support configuration flows that are separate from transaction entry and analytics. `SubmenuNavButton` provides reusable navigation entries into configuration screens, while the settings pages themselves use shared design patterns to manage currency configuration, default-currency selection, and theme control. These components make the settings area feel structurally coherent even though it manages several different kinds of application preferences.
+Settings-related components support configuration flows that are separate from transaction entry
+and data analysis. `SubmenuNavButton` is used to provide reusable entries into the currency
+configuration screens, while the settings pages themselves reuse the same visual and interaction
+patterns for preference-oriented tasks.
 
-Together, the component architecture reflects a clear separation between pages and reusable building blocks. Screen files orchestrate data loading, state coordination, and business rules, while components encapsulate the visual and interactive structures that are reused across the application. This organisation improves readability, simplifies testing, and supports incremental extension of the codebase.
+Overall, the component architecture separates screen-level orchestration from reusable building
+blocks. Screens manage state, data loading, and business rules, while components encapsulate
+the visual and interactive structures that appear repeatedly throughout the application. This
+organisation keeps the codebase easier to read, test, and extend.
 
 
 ### 2.6 Main User Flows
