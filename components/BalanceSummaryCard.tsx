@@ -10,6 +10,12 @@ import { StyleSheet, Text, View } from "react-native";
 import { getCurrencyByCode } from "@/data/currencies";
 import { useAppTheme } from "@/providers/AppThemeProvider";
 import { getBalances } from "@/utils/dataManager";
+import {
+  ensureExchangeRates,
+  getExchangeRateForDate,
+  getStoredExchangeRates,
+  type ExchangeRateData,
+} from "@/utils/exchangeRateManager";
 import { getSettings, subscribeSettings } from "@/utils/settingsManager";
 
 /**
@@ -40,10 +46,18 @@ function formatCurrencyAmount(symbol: string, value: number): string {
   return `${sign}${symbol}${formatAmount(value)}`;
 }
 
+function getTodayDateString(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
 export default function BalanceSummaryCard() {
   const { theme } = useAppTheme();
   const [currencyCodes, setCurrencyCodes] = useState<string[]>(["USD"]);
   const [balances, setBalances] = useState<Record<string, number>>({});
+  const [defaultCurrencyCode, setDefaultCurrencyCode] = useState("USD");
+  const [exchangeRates, setExchangeRates] = useState<Map<string, ExchangeRateData>>(
+    new Map(),
+  );
 
   // 读取设置与余额
   const refresh = useCallback(async () => {
@@ -63,6 +77,7 @@ export default function BalanceSummaryCard() {
     );
 
     setCurrencyCodes(nextCodes.length > 0 ? nextCodes : ["USD"]);
+    setDefaultCurrencyCode(s.defaultCurrencyCode ?? "USD");
 
     const all = await getBalances();
     const nextBalances: Record<string, number> = {};
@@ -96,6 +111,7 @@ export default function BalanceSummaryCard() {
       );
 
       setCurrencyCodes(nextCodes.length > 0 ? nextCodes : ["USD"]);
+      setDefaultCurrencyCode(next.defaultCurrencyCode ?? "USD");
 
       getBalances()
         .then((all) => {
@@ -123,9 +139,69 @@ export default function BalanceSummaryCard() {
     }, [refresh]),
   );
 
+  useEffect(() => {
+    const neededCurrencies = currencyCodes.filter(
+      (code) => code !== defaultCurrencyCode,
+    );
+
+    if (neededCurrencies.length === 0) {
+      setExchangeRates(new Map());
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadRates = async () => {
+      const ratesMap = new Map<string, ExchangeRateData>();
+
+      const cachedResults = await Promise.all(
+        neededCurrencies.map(async (code) => {
+          const cached = await getStoredExchangeRates(code, defaultCurrencyCode);
+          return { code, data: cached };
+        }),
+      );
+
+      for (const { code, data } of cachedResults) {
+        if (data && Object.keys(data.rates).length > 0) {
+          ratesMap.set(`${code}-${defaultCurrencyCode}`, data);
+        }
+      }
+
+      if (!cancelled) {
+        setExchangeRates(new Map(ratesMap));
+      }
+
+      await Promise.all(
+        neededCurrencies.map(async (code) => {
+          try {
+            await ensureExchangeRates(code, defaultCurrencyCode);
+            const fresh = await getStoredExchangeRates(code, defaultCurrencyCode);
+            if (fresh && Object.keys(fresh.rates).length > 0) {
+              ratesMap.set(`${code}-${defaultCurrencyCode}`, fresh);
+            }
+          } catch (error) {
+            console.error(`Failed to load exchange rate for ${code}:`, error);
+          }
+        }),
+      );
+
+      if (!cancelled) {
+        setExchangeRates(new Map(ratesMap));
+      }
+    };
+
+    loadRates().catch((error) =>
+      console.error("Failed to prepare total balance exchange rates:", error),
+    );
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currencyCodes, defaultCurrencyCode]);
+
   // 生成展示行
   const rows = useMemo(() => {
-    return currencyCodes.map((code) => {
+    const currencyRows = currencyCodes.map((code) => {
       const meta = getCurrencyByCode(code);
       const symbol = meta?.symbol ?? "";
       const value = balances[code] ?? 0;
@@ -134,7 +210,35 @@ export default function BalanceSummaryCard() {
         amountText: formatCurrencyAmount(symbol, value),
       };
     });
-  }, [balances, currencyCodes]);
+
+    const totalValue = currencyCodes.reduce((sum, code) => {
+      const balance = balances[code] ?? 0;
+      if (code === defaultCurrencyCode) {
+        return sum + balance;
+      }
+
+      const rateData = exchangeRates.get(`${code}-${defaultCurrencyCode}`);
+      if (!rateData) {
+        return sum + balance;
+      }
+
+      const rate = getExchangeRateForDate(rateData, getTodayDateString());
+      if (!rate) {
+        return sum + balance;
+      }
+
+      return sum + balance * rate;
+    }, 0);
+
+    const totalSymbol = getCurrencyByCode(defaultCurrencyCode)?.symbol ?? "";
+    return [
+      ...currencyRows,
+      {
+        code: "TOTAL",
+        amountText: formatCurrencyAmount(totalSymbol, totalValue),
+      },
+    ];
+  }, [balances, currencyCodes, defaultCurrencyCode, exchangeRates]);
 
   return (
     <View
