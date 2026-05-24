@@ -6,9 +6,9 @@
 
 ### 1.1 Purpose
 
-我一直有着使用记账软件记账的习惯。然而，作为一名来自欧盟外的学生，来到欧盟学习给我的记账习惯带来了一些新的挑战。首先，我现在不仅持有我本国货币的账户，还持有欧元账户，这就需要我同时管理两种货币的收支记录。其次，汇率的波动使得我很难理解我的资金在不同时间点的实际价值变化。最后，我希望能够追踪汇率趋势，以便在需要换汇时做出更明智的决策。
+I have long had the habit of using bookkeeping software to track my finances. However, as a student from outside the European Union who came to study in the EU, I encountered several new challenges in the way I manage money. First, I now hold both an account in my home currency and a euro account, which means I need to manage income and expenses across multiple currencies at the same time. Second, exchange-rate fluctuations make it difficult to understand the real value of my funds at different points in time. Finally, I also want to track exchange-rate trends so that I can make more informed decisions when I need to convert money.
 
-本 App 的目标是为像我一样需要管理多币种收支的用户提供一个简单易用的工具，帮助他们记录交易、查看余额、分析汇率趋势，并更好地理解资金的变化。在普通记账软件的基础上，本软件额外有以下特点。首先，用户可以使用任意币种记账，且该App会统计每种币种的余额。并且，可以在App中设置默认货币，App会告诉用户以默认货币衡量的总余额以及消费分类分析，帮助用户清楚地了解自己的资金状况。此外，App还会分析汇率趋势，提供买入或卖出建议，帮助用户在换汇时做出更明智的决策。
+The goal of this app is to provide a simple and practical tool for users like me who need to manage multi-currency income and expenses. It helps users record transactions, view balances, analyse exchange-rate trends, and better understand how their funds change over time. Compared with an ordinary bookkeeping app, this project includes several additional features. Users can record transactions in different currencies, and the app keeps track of the balance of each enabled bookkeeping currency. Users can also set a default currency, allowing the app to display the overall total balance and category-based statistics in that currency, which makes the financial situation easier to understand. In addition, the app analyses exchange-rate trends and provides simple buy or sell suggestions to support more informed currency-exchange decisions.
 
 ### 1.2 Requirements
 
@@ -29,6 +29,7 @@ The following table contains all the requirements that the application must sati
 | R11 | The user must be able to retrieve and cache exchange-rate data for enabled bookkeeping currencies. |
 | R12 | The user must be able to view exchange-rate trends and historical fluctuations over different time ranges. |
 | R13 | The user must be able to receive a buy/sell-oriented exchange suggestion based on recent and historical exchange-rate behaviour. |
+| R14 | The user must be able to delete an individual bookkeeping record from the overview page. |
 | R17 | The application should support both light mode and dark mode for the user interface. |
 
 
@@ -40,15 +41,17 @@ The application allows users to record both expense and income transactions thro
 
 The recording flow is designed to remain simple while still capturing the information needed for later balance calculation and statistical analysis. Each saved transaction is stored with a clear type, amount, currency, category, and timestamp, which then becomes available to the overview and statistics pages automatically.
 
-#### 1.3.2 Overview and Balance Summary
-
-The overview page provides a monthly summary of the user’s bookkeeping activity. At the top of the page, the application displays the balance of each enabled bookkeeping currency, allowing the user to quickly understand how much money is currently held in different currencies without manually checking each transaction.
-
-Below the balance summary, the page shows the list of transaction records for the selected month. This combination of aggregated balances and detailed records makes the overview page the main entry point for understanding the current financial situation at a glance.
-
-#### 1.3.3 Exchange Recording
+#### 1.3.2 Exchange Recording
 
 In addition to ordinary income and expense records, the application supports exchange recording between two currencies. This feature is intended for situations in which the user converts money from one currency account to another. The exchange flow allows the user to specify two currency amounts, representing the outgoing and incoming sides of the conversion.
+
+#### 1.3.3 Overview and Balance Summary
+
+The overview page provides a monthly summary of the user’s bookkeeping activity. At the top of the page, the application displays the balance of each enabled bookkeeping currency, allowing the user to quickly understand how much money is currently held in different currencies without manually checking each transaction. In addition, the balance card includes a final `TOTAL` row that converts all enabled bookkeeping balances into the selected default currency and presents an overall combined balance.
+
+Below the balance summary, the page shows the list of transaction records for the selected month. Each record can be pressed to open a delete confirmation, allowing the user to remove an individual bookkeeping entry directly from the overview screen. After deletion, both the record list and the balance summary refresh immediately. This combination of aggregated balances and detailed records makes the overview page the main entry point for understanding the current financial situation at a glance.
+
+
 
 #### 1.3.4 Monthly Transaction History
 
@@ -64,6 +67,29 @@ The exchange page extends the application beyond traditional bookkeeping by inte
 
 The page supports different trend ranges and rating ranges so that users can inspect short-term and longer-term movements. Based on the relative position of the current rate within recent history and on recent momentum, the app also provides a simple buy/sell-oriented suggestion. This feature is particularly useful for users who regularly move funds between currencies and want lightweight decision support inside the same application.
 
+The suggestion logic is implemented as a five-level rating. First, the current exchange rate is located within a historical window and converted into a level from 1 to 5:
+
+\[
+\text{level} = \left\lceil \frac{\text{pos}}{n} \times 5 \right\rceil
+\]
+
+where \(n\) is the number of historical rate samples in the selected window and \(\text{pos}\) is the position of the latest rate in the ascendingly sorted rate list. A lower level means the current rate is relatively low in the recent range, which is interpreted as a better buy opportunity, while a higher level means the current rate is relatively high, which is interpreted as a better sell opportunity. In the implementation, the monthly rating uses roughly the past 30 days of data, while the yearly rating uses roughly the past 365 days.
+
+To avoid overly aggressive suggestions, the rating is then adjusted by momentum. For the monthly rating, the weekly fluctuation percentage is computed as:
+
+\[
+\text{weekly fluctuation} =
+\frac{\text{currentWeekAvg} - \text{prevWeekAvg}}{\text{prevWeekAvg}} \times 100
+\]
+
+using the latest 5 trading days versus the previous 5 trading days. For the yearly rating, the monthly fluctuation percentage is computed similarly:
+
+\[
+\text{monthly fluctuation} =
+\frac{\text{currentMonthAvg} - \text{prevMonthAvg}}{\text{prevMonthAvg}} \times 100
+\]
+
+using the latest 22 trading days versus the previous 22 trading days. If the current rate appears low but the momentum is still significantly negative, the app weakens the buy suggestion by moving the level closer to the neutral middle band. Conversely, if the current rate appears high but momentum is still significantly positive, the app weakens the sell suggestion in the same way. 
 #### 1.3.7 Currency Settings
 
 The settings section allows users to configure the currencies used throughout the application. Users can enable multiple bookkeeping currencies, choose the default currency used for conversion and statistics, and manage how the app interprets and displays financial information across different pages.
@@ -105,7 +131,7 @@ The transaction record is the core entity of the application. Each record contai
 identifier, a positive amount, a currency code, a category identifier, a date-time string, an
 optional description, and a type indicating whether the record is an income or an expense.
 This same structure is used across record creation, overview rendering, balance calculation,
-statistical aggregation, and exchange handling.
+statistical aggregation, deletion handling, and exchange handling.
 
 Before a transaction is accepted into storage, it is validated. The implementation checks that
 the identifier is present, the amount is finite and strictly positive, the currency code is supported,
@@ -146,10 +172,11 @@ currency, the target currency, a mapping from `YYYY-MM-DD` dates to numeric rate
 update timestamp, and the date of the latest refresh attempt. This structure is simple enough to
 store locally, but also expressive enough for historical conversion and trend analysis.
 
-The cache model is used by both the statistics page and the exchange page. It allows the
-application to reuse previously fetched rate data for default-currency conversion, monthly and
-yearly comparisons, and buy/sell-oriented suggestion logic. Because the data is cached locally,
-the app remains responsive even when fresh network data is temporarily unavailable.
+The cache model is used by the overview page, the statistics page, and the exchange page. It
+allows the application to reuse previously fetched rate data for default-currency conversion,
+monthly and yearly comparisons, buy/sell-oriented suggestion logic, and the total-balance
+summary shown on the overview screen. Because the data is cached locally, the app remains
+responsive even when fresh network data is temporarily unavailable.
 
 ### 2.2 Local Storage Implementation
 
@@ -160,8 +187,8 @@ JSON file inside the documents directory and uses it as the primary persistence 
 transactions and balances. This solution works well because the bookkeeping state is naturally
 structured as a versioned document rather than as a set of unrelated key-value entries.
 
-All file operations are concentrated in the data manager. Transaction insertion, monthly reads,
-balance reads, file initialisation, and reset operations all go through this layer. This keeps file
+All file operations are concentrated in the data manager. Transaction insertion, deletion, monthly
+reads, balance reads, file initialisation, and reset operations all go through this layer. This keeps file
 handling isolated from the screen components and gives the application a single persistence
 boundary for the core bookkeeping data.
 
@@ -180,14 +207,14 @@ project a simple but well-structured persistence strategy.
 #### 2.2.3 Data Initialization and Migration
 
 When the application starts, it checks whether the bookkeeping file already exists. If not, a
-default version-2 file is created with empty monthly records and zero balances for all supported
+default bookkeeping file is created with empty monthly records and zero balances for all supported
 currencies. This guarantees that the rest of the application can safely assume the presence of a
 valid local bookkeeping file.
 
-Migration and normalisation are also part of the persistence layer. Legacy version-1 bookkeeping
-data is upgraded to the current version-2 structure, and settings data is normalised before use.
-This approach allows the storage format to evolve over time without forcing the application to
-discard older user data.
+Normalisation is also part of the persistence layer. Before the stored data is used, the
+application checks that the bookkeeping data and settings remain in a valid and usable form.
+This helps the rest of the application work with consistent local data and reduces the risk of
+invalid configuration affecting normal usage.
 
 ### 2.3 External Services
 
@@ -210,9 +237,10 @@ immediately so that the interface can render without unnecessary waiting. After 
 attempts to refresh the data in the background.
 
 The cache keeps about one year of history for each currency pair. This is enough to support the
-implemented monthly and yearly rating logic, daily/weekly/monthly fluctuation analysis, and
-historical conversion in the statistics page. Because only missing or outdated data needs to be
-fetched, the number of API requests remains limited.
+implemented monthly and yearly rating logic, daily/weekly/monthly fluctuation analysis,
+historical conversion in the statistics page, and default-currency total conversion on the
+overview page. Because only missing or outdated data needs to be fetched, the number of API
+requests remains limited.
 
 #### 2.3.3 Network Failure Handling
 
@@ -290,18 +318,31 @@ This part of the architecture separates data preparation from data presentation.
 the relevant records or rate history, and the chart components focus on visual rendering, totals,
 legends, and compact analytical feedback.
 
-#### 2.5.5 List Item Components
+#### 2.5.5 Balance Summary Components
+
+Balance-summary components provide a compact overview of the user’s current multi-currency
+position. `BalanceSummaryCard` renders one row per enabled bookkeeping currency and also
+renders a final `TOTAL` row in the default currency by combining cached exchange-rate data
+with the locally stored per-currency balances.
+
+This component is intentionally separate from the transaction list because it combines two
+different kinds of state: persisted balance totals from the bookkeeping file and conversion
+metadata from settings and exchange-rate cache entries. Encapsulating that logic keeps the
+overview screen itself simpler and makes the summary behaviour easier to test in isolation.
+
+#### 2.5.6 List Item Components
 
 List-item components encapsulate repeated visual units that appear in transaction browsing and
 settings navigation. The clearest example is `TransactionRecordItem`, which renders the icon,
 description, timestamp, and signed amount for each bookkeeping record shown on the overview
-page.
+page. On the overview screen, these items are also used as the interaction entry point for
+record-level deletion.
 
 This separation is useful because bookkeeping interfaces often display many repeated entries.
 A dedicated list-item layer reduces duplication and keeps spacing, formatting, and visual
 structure consistent across the application.
 
-#### 2.5.6 Settings Components
+#### 2.5.7 Settings Components
 
 Settings-related components support configuration flows that are separate from transaction entry
 and data analysis. `SubmenuNavButton` is used to provide reusable entries into the currency
@@ -313,20 +354,6 @@ blocks. Screens manage state, data loading, and business rules, while components
 the visual and interactive structures that appear repeatedly throughout the application. This
 organisation keeps the codebase easier to read, test, and extend.
 
-
-### 2.6 Main User Flows
-
-#### 2.6.1 Add Expense Flow
-
-#### 2.6.2 Add Income Flow
-
-#### 2.6.3 Add Exchange Flow
-
-#### 2.6.4 View Monthly Records Flow
-
-#### 2.6.5 Configure Currencies Flow
-
-#### 2.6.6 Load Exchange Rates Flow
 
 ## 3. User Interface
 
@@ -355,6 +382,12 @@ organisation keeps the codebase easier to read, test, and extend.
 
 ### 4.1 Testing Campaign
 
+To improve confidence in the correctness and reliability of the application, a structured automated testing campaign was designed and carried out. Since the project combines local bookkeeping persistence, multi-currency balance handling, exchange-rate analysis, and interactive mobile user-interface behaviour, testing was necessary not only to confirm expected outputs in normal cases but also to reduce the risk of regressions when features were added or modified.
+
+The testing campaign was organised into three complementary levels: unit tests, component tests, and integration tests. Unit tests were used to verify isolated logic such as transaction validation, balance computation, settings normalization, and exchange-rate formulas. Component tests were used to check the rendering and interaction behaviour of reusable interface elements. Integration tests were then used to validate complete screen-level workflows in which persistence, state updates, rendering, and navigation work together.
+
+This layered testing strategy was chosen because no single test type is sufficient on its own for a mobile application of this kind. Unit tests provide fast feedback on the correctness of the core logic, component tests provide evidence that shared UI building blocks behave as expected, and integration tests help demonstrate that the main user flows operate correctly as a whole.
+
 ### 4.2 Unit Tests
 
 Unit testing was implemented to verify the correctness of the project’s core logic in isolation from the user interface and external services. For this application, the most important unit-test targets are the data management utilities, settings normalization logic, exchange-rate analysis functions, and smaller helper functions that support date formatting, monthly grouping, and numeric processing. The goal of these tests is to ensure that critical bookkeeping and exchange-rate calculations behave correctly for both normal inputs and edge cases such as empty data, invalid records, unsupported currencies, and insufficient historical rate samples.
@@ -368,13 +401,22 @@ The implemented unit-test set is summarised below.
 | `exchangeRateManager` | Fetches, caches, and analyses exchange-rate history for trend and level suggestions. | UT1: test `getDailyFluctuationPercentage()` returns the correct one-day percentage change and `null` when insufficient data exists. UT2: test `getMonthlyRateLevel()` maps low and high current rates to appropriate rating bands. UT3: test `getMonthlyRateLevel()` and `getYearlyRateLevel()` apply momentum correction when a strong trend should soften a buy or sell recommendation. |
 | Helper functions | Small pure helpers used to support formatting and deterministic data processing. | UT1: test `getYearMonthKey()` extracts the correct `YYYY-MM` key from a valid date string. UT2: test amount-formatting helpers preserve two decimal places. |
 
-In total, 11 unit tests were implemented across these four areas. The completed test suite verifies transaction validation, month-based transaction grouping, balance computation, settings normalization, exchange-rate fluctuation formulas, and the five-level buy/sell rating logic used by the exchange screen. All implemented unit tests passed successfully, providing a reliable foundation for the rest of the application and supporting the later addition of component-level and integration-level testing.
-
 The unit tests were organised into three test files. Helper-function tests were grouped inside `dataManager.test.ts` rather than being placed in a separate file:
 
 - `dataManager.test.ts`: 5 tests covering record validation, signed balance calculation, legacy file migration, year-month key extraction, and two-decimal numeric rounding.
 - `settingsManager.test.ts`: 3 tests covering default settings recovery, duplicate and invalid currency filtering, and the protection against removing the final bookkeeping currency.
 - `exchangeRateManager.test.ts`: 3 tests covering daily fluctuation calculation, monthly rating-band mapping, and momentum-based correction for monthly and yearly exchange suggestions.
+
+Unit test overview: The unit tests implemented provide focused coverage of the application’s most important core logic, with particular attention to transaction validation, month-based grouping, balance computation, settings normalization, and exchange-rate analysis. In total, 11 unit tests were implemented across these four areas. All implemented unit tests passed successfully, providing a reliable foundation for the rest of the application and supporting the later addition of component-level and integration-level testing.
+
+| Module | Statements | Branches | Functions | Lines |
+| --- | ---: | ---: | ---: | ---: |
+| `dataManager` | 20.60% | 31.97% | 22.22% | 21.96% |
+| `settingsManager` | 70.00% | 57.77% | 64.28% | 71.42% |
+| `exchangeRateManager` | 43.47% | 42.30% | 66.66% | 45.45% |
+| All tested utility files | 36.00% | 39.25% | 45.45% | 37.63% |
+
+Table 4.2: Unit test results
 
 
 ### 4.3 Component Tests
@@ -388,18 +430,32 @@ The implemented component-test coverage is summarised below.
 | input | `CurrencyAmountInput` | CT1: Correct rendering of currency symbol and amount placeholder. CT2: Correct rendering of an initial amount value and update of the amount callback. CT3: Correct interaction with the currency picker and currency change callback. |
 | picker | `MonthYearPicker` | CT1: Correct rendering of the selected year and month. CT2: Correct opening of the month wheel picker and callback invocation after a new month is selected. |
 | list item | `TransactionRecordItem` | CT1: Correct rendering of description, time, and signed amount. CT2: Correct fallback rendering when description is empty. CT3: Correct interaction behaviour when the component is pressable. |
+| summary | `BalanceSummaryCard` | CT1: Correct rendering of the final `TOTAL` row in the selected default currency after multi-currency conversion. CT2: Correct immediate refresh of the displayed balances after a data-change event is triggered. |
 | chart | `ExpenseCategoryPieChart` | CT1: Correct empty-state rendering when no matching transaction data exists. CT2: Correct rendering of total amount and legend rows after multi-currency conversion. |
 | chart | `ExchangeRateCard` | CT1: Correct rendering of currency pair, current rate, fluctuation text, and chart. CT2: Correct rendering of the insufficient-data state without fluctuation text. |
 
-In total, 12 component tests were implemented across these five reusable components. The completed test suite verifies UI rendering, placeholder and fallback behaviour, modal-based selection interaction, signed amount display, multi-currency chart rendering, and exchange-card state presentation. All implemented component tests passed successfully, providing confidence that the application’s most frequently reused UI building blocks behave correctly in isolation.
-
-The component tests were organised into five dedicated test files:
+The component tests were organised into six dedicated test files:
 
 - `CurrencyAmountInput.test.tsx`: 3 tests covering placeholder rendering, initial value rendering, amount-change callback behaviour, and currency-selection interaction.
 - `MonthYearPicker.test.tsx`: 2 tests covering initial rendering and month-selection callback behaviour through the wheel-style picker.
 - `TransactionRecordItem.test.tsx`: 3 tests covering record rendering, category-label fallback, and optional press interaction.
+- `BalanceSummaryCard.test.tsx`: 2 tests covering the rendering of the final `TOTAL` row in the default currency after balance conversion and the immediate refresh of balances after a data-change event.
 - `ExpenseCategoryPieChart.test.tsx`: 2 tests covering the empty state and the rendering of converted totals and category legends.
 - `ExchangeRateCard.test.tsx`: 2 tests covering full rate-card rendering and the insufficient-data display state.
+
+Component test overview: The component tests implemented provide structured coverage of the reusable UI building blocks that support the application’s bookkeeping, statistics, and exchange flows. The tests focus on both visual correctness and interaction behaviour, ensuring that these shared components behave consistently across screens. In total, 14 component tests were implemented across these six reusable components. All implemented component tests passed successfully, providing confidence that the application’s most frequently reused UI building blocks behave correctly in isolation.
+
+| Component / Group | Statements | Branches | Functions | Lines |
+| --- | ---: | ---: | ---: | ---: |
+| `BalanceSummaryCard` | 78.26% | 47.88% | 67.74% | 82.56% |
+| `CurrencyAmountInput` | 75.00% | 64.28% | 68.42% | 80.00% |
+| `MonthYearPicker` | 92.98% | 71.42% | 86.95% | 94.11% |
+| `TransactionRecordItem` | 97.05% | 70.37% | 100.00% | 100.00% |
+| `ExpenseCategoryPieChart` | 93.93% | 68.18% | 100.00% | 93.75% |
+| `ExchangeRateCard` | 87.50% | 83.33% | 100.00% | 87.50% |
+| All component files | 49.02% | 42.17% | 47.15% | 50.62% |
+
+Table 4.4: Component test results
 
 ### 4.4 Integration Tests
 
@@ -410,27 +466,28 @@ The implemented integration-test coverage is summarised below.
 | Section | Page / Flow | Test Suite | Implemented Test Cases |
 | --- | --- | --- | --- |
 | overview | `index` | Render | IT1: Correct loading of the balance-summary section and transaction list on mount. IT2: Correct rendering of the empty state when the selected month has no records. |
-| overview | `index` | Interaction | IT1: Correct refresh of the overview screen after the selected month changes. IT2: Correct refresh of the overview screen after a data-change subscription event is triggered. |
+| overview | `index` | Interaction | IT1: Correct refresh of the overview screen after the selected month changes. IT2: Correct refresh of the overview screen after a data-change subscription event is triggered. IT3: Correct opening of the delete confirmation and deletion trigger after the user presses a transaction record. |
 | exchange | `exchange` | Render | IT1: Correct rendering of cached exchange-rate output after settings and local cache are loaded. IT2: Correct error-state rendering when exchange-rate loading fails. |
 | exchange | `exchange` | Interaction | IT1: Correct refresh of trend and rating output after the user changes the trend range and rating range. |
 | settings | `settings` | Navigation | IT1: Correct navigation from the settings tab to the bookkeeping currency configuration page. IT2: Correct navigation from the settings tab to the default currency configuration page. |
 | settings | `settings` | Interaction | IT1: Correct triggering of “Clear All Records”. IT2: Correct triggering of “Generate Fixed Test Data”. |
 | settings | default currency flow | Integration | IT1: Correct update flow when the user selects a new default currency from the default-currency configuration screen. |
 
-In total, 9 integration tests were implemented across three screen-level test files. The completed integration-test suite verifies overview rendering and refresh behaviour, exchange-rate screen loading and range switching, settings-page navigation, data-management actions, and the default-currency update flow. All implemented integration tests passed successfully, providing evidence that the application’s core screen-level workflows behave correctly when multiple modules and components work together.
-
 The integration tests were organised into three dedicated test files:
 
-- `HomeTab.integration.test.tsx`: 3 tests covering initial overview rendering, empty-state rendering, and refresh behaviour after month changes and data-change events.
+- `HomeTab.integration.test.tsx`: 4 tests covering initial overview rendering, empty-state rendering, refresh behaviour after month changes and data-change events, and delete-confirmation / delete-trigger behaviour for a pressed transaction record.
 - `ExchangeTab.integration.test.tsx`: 3 tests covering cached exchange-rate rendering, error-state rendering, and output refresh after trend-range and rating-range changes.
 - `SettingsFlow.integration.test.tsx`: 3 tests covering settings-page navigation, settings-page data-management actions, and the default-currency update flow.
 
-## 5. Limitations and Future Work
+Integration test overview: The integration tests implemented provide screen-level coverage of the application’s most important workflows, with emphasis on rendering correctness, interaction behaviour, and navigation between related pages. These tests verify that the main modules work together correctly when persistence, state updates, and UI rendering are combined. In total, 10 integration tests were implemented across three screen-level test files. All implemented integration tests passed successfully, providing evidence that the application’s core workflows behave correctly as a whole.
 
-### 5.1 Current Limitations
+| Section / Screen | Statements | Branches | Functions | Lines |
+| --- | ---: | ---: | ---: | ---: |
+| Overview | 86.66% | 75.00% | 73.33% | 89.28% |
+| Exchange | 89.28% | 78.94% | 93.33% | 89.74% |
+| Settings | 81.81% | 100.00% | 100.00% | 81.81% |
+| Default currency flow | 86.36% | 100.00% | 88.88% | 86.36% |
+| All app screen files | 26.48% | 19.47% | 24.32% | 26.62% |
 
-### 5.2 Planned Improvements
+Table 4.6: Integration test results
 
-### 5.3 Possible Device-Specific Features
-
-### 5.4 Possible Backend or Cloud Synchronization
