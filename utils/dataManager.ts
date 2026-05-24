@@ -590,6 +590,53 @@ export async function setBalance(
   await writeBookkeepingFile(file);
 }
 
+/**
+ * 删除指定 UUID 的交易记录
+ * 删除成功后会重算余额并触发数据变更通知
+ * @param uuid 交易记录唯一标识
+ * @returns 是否删除成功
+ */
+export async function deleteTransaction(uuid: string): Promise<boolean> {
+  if (!uuid || typeof uuid !== "string") {
+    return false;
+  }
+
+  const file = await readBookkeepingFile();
+  const nextTransactionsByMonth: BookkeepingData = {};
+  let deleted = false;
+
+  for (const [yearMonth, records] of Object.entries(file.transactionsByMonth)) {
+    if (!Array.isArray(records)) {
+      nextTransactionsByMonth[yearMonth] = [];
+      continue;
+    }
+
+    const filtered = records.filter((record) => {
+      const shouldKeep = record.uuid !== uuid;
+      if (!shouldKeep) {
+        deleted = true;
+      }
+      return shouldKeep;
+    });
+
+    if (filtered.length > 0) {
+      nextTransactionsByMonth[yearMonth] = filtered;
+    }
+  }
+
+  if (!deleted) {
+    return false;
+  }
+
+  await writeBookkeepingFile({
+    version: 2,
+    transactionsByMonth: nextTransactionsByMonth,
+    balances: computeBalances(nextTransactionsByMonth),
+  });
+
+  return true;
+}
+
 export const __testables = {
   computeBalances,
   normalizeBookkeepingFile,

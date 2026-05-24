@@ -5,6 +5,7 @@ const mockGetSettings = jest.fn();
 const mockGetStoredExchangeRates = jest.fn();
 const mockEnsureExchangeRates = jest.fn();
 const mockGetExchangeRateForDate = jest.fn();
+let mockDataChangeListener: (() => void) | null = null;
 
 jest.mock("@react-navigation/native", () => ({
   useFocusEffect: jest.fn(),
@@ -24,6 +25,10 @@ jest.mock("@/providers/AppThemeProvider", () => ({
 
 jest.mock("@/utils/dataManager", () => ({
   getBalances: (...args: unknown[]) => mockGetBalances(...args),
+  subscribeDataChanges: (listener: () => void) => {
+    mockDataChangeListener = listener;
+    return jest.fn();
+  },
 }));
 
 jest.mock("@/utils/settingsManager", () => ({
@@ -44,6 +49,7 @@ import BalanceSummaryCard from "@/components/BalanceSummaryCard";
 describe("BalanceSummaryCard", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockDataChangeListener = null;
 
     mockGetSettings.mockResolvedValue({
       version: 2,
@@ -80,5 +86,30 @@ describe("BalanceSummaryCard", () => {
     });
 
     expect(mockGetStoredExchangeRates).toHaveBeenCalledWith("EUR", "USD");
+  });
+
+  it("refreshes balances immediately after a data-change event", async () => {
+    mockGetBalances
+      .mockResolvedValueOnce({
+        EUR: 100,
+        USD: 50,
+      })
+      .mockResolvedValueOnce({
+        EUR: 80,
+        USD: 50,
+      });
+
+    render(<BalanceSummaryCard />);
+
+    await waitFor(() => {
+      expect(screen.getByText(" $170.00")).toBeTruthy();
+    });
+
+    expect(mockDataChangeListener).toBeTruthy();
+    mockDataChangeListener?.();
+
+    await waitFor(() => {
+      expect(screen.getByText(" $146.00")).toBeTruthy();
+    });
   });
 });

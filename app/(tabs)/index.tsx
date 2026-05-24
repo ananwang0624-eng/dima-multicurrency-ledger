@@ -4,13 +4,14 @@
  */
 import { useFocusEffect } from "@react-navigation/native";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import BalanceSummaryCard from "@/components/BalanceSummaryCard";
 import { MonthYearPicker } from "@/components/MonthYearPicker";
 import { useAppTheme } from "@/providers/AppThemeProvider";
 import TransactionRecordItem from "@/components/TransactionRecordItem";
 import {
+  deleteTransaction,
   getTransactionsByMonth,
   subscribeDataChanges,
   type TransactionRecord,
@@ -56,6 +57,31 @@ export default function HomeTab() {
     }, [refreshRecords]),
   );
 
+  const handleDeleteRecord = useCallback((record: TransactionRecord) => {
+    const label = record.description?.trim() || "this record";
+
+    Alert.alert(
+      "Delete Record",
+      `Delete ${label}?`,
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            deleteTransaction(record.uuid).catch((e) =>
+              console.error("Failed to delete transaction:", e),
+            );
+          },
+        },
+      ],
+      { cancelable: true },
+    );
+  }, []);
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={styles.header}>
@@ -80,7 +106,12 @@ export default function HomeTab() {
         <View style={{ gap: 12 }}>
           {records.length > 0 ? (
             records.map((record) => (
-              <TransactionRecordItem key={record.uuid} record={record} />
+              <TransactionRecordItem
+                key={record.uuid}
+                record={record}
+                onPress={() => handleDeleteRecord(record)}
+                testID={`transaction-record-${record.uuid}`}
+              />
             ))
           ) : (
             <Text style={[styles.emptyText, { color: theme.textSecondary }]}>

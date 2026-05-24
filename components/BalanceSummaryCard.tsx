@@ -1,7 +1,7 @@
 /**
  * 余额摘要卡片组件
  * 显示所有启用的记账币种及其余额
- * 支持自动刷新和订阅设置变化
+ * 支持自动刷新、设置变化订阅和数据变化订阅
  */
 import { useFocusEffect } from "@react-navigation/native";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -9,7 +9,7 @@ import { StyleSheet, Text, View } from "react-native";
 
 import { getCurrencyByCode } from "@/data/currencies";
 import { useAppTheme } from "@/providers/AppThemeProvider";
-import { getBalances } from "@/utils/dataManager";
+import { getBalances, subscribeDataChanges } from "@/utils/dataManager";
 import {
   ensureExchangeRates,
   getExchangeRateForDate,
@@ -93,7 +93,7 @@ export default function BalanceSummaryCard() {
 
     refresh().catch((e) => console.error("Failed to load balances:", e));
 
-    const unsubscribe = subscribeSettings((next) => {
+    const unsubscribeSettings = subscribeSettings((next) => {
       if (cancelled) return;
 
       const nextCodesRaw =
@@ -126,9 +126,15 @@ export default function BalanceSummaryCard() {
         .catch((e) => console.error("Failed to refresh balances:", e));
     });
 
+    const unsubscribeDataChanges = subscribeDataChanges(() => {
+      if (cancelled) return;
+      refresh().catch((e) => console.error("Failed to refresh balances:", e));
+    });
+
     return () => {
       cancelled = true;
-      unsubscribe();
+      unsubscribeSettings();
+      unsubscribeDataChanges();
     };
   }, [refresh]);
 

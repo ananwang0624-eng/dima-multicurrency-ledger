@@ -1,10 +1,13 @@
+import { Alert } from "react-native";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 
 const mockGetTransactionsByMonth = jest.fn();
+const mockDeleteTransaction = jest.fn();
 let mockDataChangeListener: (() => void) | null = null;
 
 jest.mock("@/utils/dataManager", () => ({
   getTransactionsByMonth: (...args: unknown[]) => mockGetTransactionsByMonth(...args),
+  deleteTransaction: (...args: unknown[]) => mockDeleteTransaction(...args),
   subscribeDataChanges: (listener: () => void) => {
     mockDataChangeListener = listener;
     return jest.fn();
@@ -50,6 +53,7 @@ describe("HomeTab integration tests", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockDataChangeListener = null;
+    mockDeleteTransaction.mockResolvedValue(true);
   });
 
   it("loads and renders the balance summary and transaction list on mount", async () => {
@@ -148,5 +152,52 @@ describe("HomeTab integration tests", () => {
     await waitFor(() => {
       expect(screen.getByText("Refreshed Record")).toBeTruthy();
     });
+  });
+
+  it("opens a delete confirmation and deletes the pressed record", async () => {
+    const alertSpy = jest.spyOn(Alert, "alert").mockImplementation(jest.fn());
+
+    mockGetTransactionsByMonth.mockResolvedValue([
+      {
+        uuid: "tx-1",
+        amount: 20,
+        currency: "USD",
+        category: 0,
+        date: "2025-12-29T10:30:00.000+01:00",
+        description: "Lunch",
+        type: "expense",
+      },
+    ]);
+
+    render(<HomeTab />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Lunch")).toBeTruthy();
+    });
+
+    fireEvent.press(screen.getByTestId("transaction-record-tx-1"));
+
+    expect(alertSpy).toHaveBeenCalledWith(
+      "Delete Record",
+      "Delete Lunch?",
+      expect.arrayContaining([
+        expect.objectContaining({ text: "Cancel", style: "cancel" }),
+        expect.objectContaining({ text: "Delete", style: "destructive" }),
+      ]),
+      { cancelable: true },
+    );
+
+    const alertButtons = alertSpy.mock.calls[0]?.[2] as
+      | Array<{ text?: string; onPress?: () => void }>
+      | undefined;
+    const deleteButton = alertButtons?.find((button) => button.text === "Delete");
+
+    deleteButton?.onPress?.();
+
+    await waitFor(() => {
+      expect(mockDeleteTransaction).toHaveBeenCalledWith("tx-1");
+    });
+
+    alertSpy.mockRestore();
   });
 });
